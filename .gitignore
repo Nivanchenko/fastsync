@@ -20,3 +20,6 @@ reports/
 
 # JDK
 JDK/
+
+# Other artifacts
+build/
