@@ -1,0 +1,22 @@
+# Maven / Tycho build output
+target/
+bin/
+**/target/
+**/bin/
+
+# Eclipse workspace and local state
+.metadata/
+.recommenders/
+*.log
+
+# OS/editor files
+.DS_Store
+.idea/
+*.iml
+
+# Generated reports
+reports/
+**/reports/
+
+# JDK
+JDK/
