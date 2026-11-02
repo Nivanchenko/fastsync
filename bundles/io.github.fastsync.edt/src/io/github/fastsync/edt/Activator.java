@@ -6,6 +6,8 @@ import org.osgi.framework.BundleContext;
 /** OSGi lifecycle entry point for the FastSync EDT plug-in. */
 public class Activator extends AbstractUIPlugin
 {
+    public static final String PLUGIN_ID = "io.github.fastsync.edt";
+
     private static Activator plugin;
 
     @Override

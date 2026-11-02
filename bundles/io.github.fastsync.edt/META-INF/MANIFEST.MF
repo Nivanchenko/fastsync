@@ -8,6 +8,12 @@ Bundle-Activator: io.github.fastsync.edt.Activator
 Bundle-ActivationPolicy: lazy
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.core.runtime,
- org.eclipse.ui
+ org.eclipse.core.resources,
+ org.eclipse.ui,
+ com.e1c.g5.dt.applications,
+ com.e1c.g5.dt.applications.infobases,
+ com._1c.g5.v8.dt.platform.services.core,
+ com._1c.g5.v8.dt.platform.services.model,
+ com._1c.g5.wiring
 Import-Package: org.osgi.framework
 Bundle-RequiredExecutionEnvironment: JavaSE-17
