@@ -20,7 +20,6 @@ import com._1c.g5.v8.dt.export.IExportOperationFactory;
 import com._1c.g5.v8.dt.export.IExportPreparationService;
 import com._1c.g5.v8.dt.export.IExportStrategy;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
-import com._1c.g5.wiring.ServiceAccess;
 
 /** Converts project sources to the XML format accepted by ibcmd. */
 public final class SourceExporter
@@ -59,8 +58,8 @@ public final class SourceExporter
 
     public SourceExporter()
     {
-        this(ServiceAccess.get(IExportPreparationService.class), ServiceAccess.get(IExportOperationFactory.class),
-            ServiceAccess.get(IConfigurationProvider.class));
+        this(Services.get(IExportPreparationService.class), Services.get(IExportOperationFactory.class),
+            Services.get(IConfigurationProvider.class));
     }
 
     public SourceExporter(IExportPreparationService preparationService, IExportOperationFactory operationFactory,

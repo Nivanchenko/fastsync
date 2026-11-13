@@ -12,7 +12,6 @@ import com._1c.g5.v8.dt.platform.services.core.runtimes.execution.RuntimeExecuti
 import com._1c.g5.v8.dt.platform.services.core.runtimes.execution.RuntimeExecutionException;
 import com._1c.g5.v8.dt.platform.services.core.runtimes.execution.RuntimeVersionRequiredException;
 import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
-import com._1c.g5.wiring.ServiceAccess;
 
 /**
  * Closes the Designer Agent connection holding the file infobase lock and restores the
@@ -47,7 +46,7 @@ public final class DesignerSessionGuard implements AutoCloseable
 
     public DesignerSessionGuard(UploadTarget target) throws UploadException
     {
-        IRuntimeComponentManager manager = ServiceAccess.get(IRuntimeComponentManager.class);
+        IRuntimeComponentManager manager = Services.get(IRuntimeComponentManager.class);
         if (manager == null)
         {
             throw new UploadException("error.service", "IRuntimeComponentManager"); //$NON-NLS-1$ //$NON-NLS-2$

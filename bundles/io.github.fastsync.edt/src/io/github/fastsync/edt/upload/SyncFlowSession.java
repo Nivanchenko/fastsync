@@ -13,7 +13,6 @@ import com._1c.g5.v8.dt.core.platform.IDtProjectManager;
 import com._1c.g5.v8.dt.core.platform.IWorkspaceOrchestrator;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.v2.IInfobaseSynchronizationStateManager;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.v2.IUpdateInfobaseFlow;
-import com._1c.g5.wiring.ServiceAccess;
 
 /**
  * Wraps the public v2 synchronization flow used to collect unsynchronized changes and to
@@ -37,7 +36,7 @@ public final class SyncFlowSession implements AutoCloseable
 
     public static SyncFlowSession start(UploadTarget target) throws UploadException
     {
-        IInfobaseSynchronizationStateManager manager = ServiceAccess.get(IInfobaseSynchronizationStateManager.class);
+        IInfobaseSynchronizationStateManager manager = Services.get(IInfobaseSynchronizationStateManager.class);
         if (manager == null)
         {
             throw new UploadException("error.service", SERVICE_NAME); //$NON-NLS-1$
@@ -50,7 +49,7 @@ public final class SyncFlowSession implements AutoCloseable
         {
             IUpdateInfobaseFlow flow = manager.startUpdateInfobaseFlow(target.dtProject(), target.infobase());
             flow.start();
-            return new SyncFlowSession(ServiceAccess.get(IWorkspaceOrchestrator.class), target.dtProject(), flow);
+            return new SyncFlowSession(Services.get(IWorkspaceOrchestrator.class), target.dtProject(), flow);
         }
         catch (RuntimeException e)
         {

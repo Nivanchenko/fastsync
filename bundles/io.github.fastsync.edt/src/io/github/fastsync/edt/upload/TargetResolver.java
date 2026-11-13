@@ -4,12 +4,16 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 
 import com._1c.g5.v8.dt.core.platform.IDtProject;
 import com._1c.g5.v8.dt.core.platform.IDtProjectManager;
@@ -29,11 +33,12 @@ import com._1c.g5.v8.dt.platform.services.model.FileConnectionString;
 import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
 import com._1c.g5.v8.dt.platform.services.model.InfobaseType;
 import com._1c.g5.v8.dt.platform.services.model.RuntimeInstallation;
-import com._1c.g5.wiring.ServiceAccess;
 import com.e1c.g5.dt.applications.ApplicationException;
 import com.e1c.g5.dt.applications.IApplication;
 import com.e1c.g5.dt.applications.IApplicationManager;
 import com.e1c.g5.dt.applications.infobases.IInfobaseApplication;
+
+import io.github.fastsync.edt.Activator;
 
 /** Resolves and validates the upload target from the project's default application. */
 public final class TargetResolver
@@ -47,9 +52,7 @@ public final class TargetResolver
 
     public TargetResolver()
     {
-        this(ServiceAccess.get(IApplicationManager.class), ServiceAccess.get(IRuntimeInstallationManager.class),
-            ServiceAccess.get(IRuntimeComponentManager.class), ServiceAccess.get(IV8ProjectManager.class),
-            ServiceAccess.get(IDtProjectManager.class), ServiceAccess.get(IInfobaseAccessManager.class));
+        this(null, null, null, null, null, null);
     }
 
     public TargetResolver(IApplicationManager applicationManager,
@@ -72,7 +75,7 @@ public final class TargetResolver
         IApplication application;
         try
         {
-            application = requireService(applicationManager, "IApplicationManager") //$NON-NLS-1$
+            application = service(applicationManager, IApplicationManager.class, "IApplicationManager") //$NON-NLS-1$
                 .getDefaultApplication(project)
                 .orElseThrow(() -> new UploadException("error.no.application")); //$NON-NLS-1$
         }
@@ -114,9 +117,13 @@ public final class TargetResolver
             .filter(version -> !version.isBlank())
             .orElseThrow(() -> new UploadException("error.no.version")); //$NON-NLS-1$
 
-        List<RuntimeInstallation> matches = requireService(installationManager, "IRuntimeInstallationManager") //$NON-NLS-1$
-            .getAllRegistered()
-            .stream()
+        List<RuntimeInstallation> installations = installationManager == null
+            ? enterpriseInstallations() : installationManager.getAllRegistered();
+        if (installations == null)
+        {
+            throw new UploadException("error.service", "IRuntimeInstallationManager"); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        List<RuntimeInstallation> matches = installations.stream()
             .filter(RuntimeInstallations.filterByVersion(requiredVersion))
             .toList();
         if (matches.size() != 1)
@@ -128,7 +135,7 @@ public final class TargetResolver
         ComponentExecutorInfo<ILaunchableRuntimeComponent, IDesignerSessionThickClientLauncher> componentAndExecutor;
         try
         {
-            componentAndExecutor = requireService(componentManager, "IRuntimeComponentManager") //$NON-NLS-1$
+            componentAndExecutor = service(componentManager, IRuntimeComponentManager.class, "IRuntimeComponentManager") //$NON-NLS-1$
                 .resolveExecutor(ILaunchableRuntimeComponent.class, IDesignerSessionThickClientLauncher.class,
                     installation, IRuntimeComponentTypes.THICK_CLIENT);
         }
@@ -143,19 +150,22 @@ public final class TargetResolver
             throw new UploadException("error.ibcmd", ibcmd); //$NON-NLS-1$
         }
 
-        IV8Project v8Project = requireService(projectManager, "IV8ProjectManager").getProject(project); //$NON-NLS-1$
+        IV8Project v8Project = service(projectManager, IV8ProjectManager.class, "IV8ProjectManager") //$NON-NLS-1$
+            .getProject(project);
         if (v8Project == null || v8Project.getVersion() == null)
         {
             throw new UploadException("error.no.version"); //$NON-NLS-1$
         }
-        IDtProject dtProject = requireService(dtProjectManager, "IDtProjectManager").getDtProject(project); //$NON-NLS-1$
+        IDtProject dtProject = service(dtProjectManager, IDtProjectManager.class, "IDtProjectManager") //$NON-NLS-1$
+            .getDtProject(project);
 
+        IInfobaseAccessManager access = accessManager != null ? accessManager : Services.get(IInfobaseAccessManager.class);
         IInfobaseAccessSettings accessSettings = IInfobaseAccessSettings.NOT_DEFINED;
-        if (accessManager != null)
+        if (access != null)
         {
             try
             {
-                IInfobaseAccessSettings resolved = accessManager.resolveSettings(infobase);
+                IInfobaseAccessSettings resolved = access.resolveSettings(infobase);
                 if (resolved != null)
                 {
                     accessSettings = resolved;
@@ -169,6 +179,54 @@ public final class TargetResolver
 
         return new UploadTarget(project, dtProject, application, infobase, infobasePath, requiredVersion,
             installation, thickClient, ibcmd, v8Project.getVersion(), accessSettings);
+    }
+
+    /** There may be several installation managers (enterprise/mobile); pick the enterprise one. */
+    private List<RuntimeInstallation> enterpriseInstallations()
+    {
+        Activator activator = Activator.getDefault();
+        BundleContext context = activator == null ? null : activator.getBundle().getBundleContext();
+        if (context == null)
+        {
+            return null;
+        }
+        try
+        {
+            Collection<ServiceReference<IRuntimeInstallationManager>> references =
+                context.getServiceReferences(IRuntimeInstallationManager.class, null);
+            List<RuntimeInstallation> installations = new ArrayList<>();
+            for (ServiceReference<IRuntimeInstallationManager> reference : references)
+            {
+                IRuntimeInstallationManager manager = context.getService(reference);
+                try
+                {
+                    if (manager != null
+                        && RuntimeInstallations.ENTERPRISE_PLATFORM.equals(manager.getRuntimeTypeId()))
+                    {
+                        installations.addAll(manager.getAllRegistered());
+                    }
+                }
+                finally
+                {
+                    context.ungetService(reference);
+                }
+            }
+            return installations;
+        }
+        catch (InvalidSyntaxException e)
+        {
+            return null;
+        }
+    }
+
+    private <T> T service(T injected, Class<T> type, String name) throws UploadException
+    {
+        T service = injected != null ? injected : Services.get(type);
+        if (service == null)
+        {
+            throw new UploadException("error.service", name); //$NON-NLS-1$
+        }
+        return service;
     }
 
     private Path resolveIbcmd(RuntimeInstallation installation, ILaunchableRuntimeComponent thickClient)
@@ -202,14 +260,5 @@ public final class TargetResolver
             }
         }
         return candidates.isEmpty() ? Path.of(name) : candidates.get(0);
-    }
-
-    private <T> T requireService(T service, String name) throws UploadException
-    {
-        if (service == null)
-        {
-            throw new UploadException("error.service", name); //$NON-NLS-1$
-        }
-        return service;
     }
 }
