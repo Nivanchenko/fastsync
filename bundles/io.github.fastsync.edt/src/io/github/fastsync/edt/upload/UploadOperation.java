@@ -14,6 +14,8 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 
+import com._1c.g5.v8.dt.platform.services.core.infobases.IInfobasePreferencesManager;
+
 import io.github.fastsync.edt.Messages;
 import io.github.fastsync.edt.ui.ForceConfirmation;
 
@@ -192,9 +194,17 @@ public final class UploadOperation
         {
             throw new UploadException("error.apply", result.exitCode()); //$NON-NLS-1$
         }
-        if (!forceConfirmation.test(output))
+        if (asksForConfirmation())
         {
-            throw new UploadException("report.importedNotApplied"); //$NON-NLS-1$
+            if (!forceConfirmation.test(output))
+            {
+                throw new UploadException("report.importedNotApplied"); //$NON-NLS-1$
+            }
+        }
+        else
+        {
+            // The infobase preference explicitly disables confirmation, as the standard EDT load does.
+            listener.outputLine(Messages.get("console.autoForce")); //$NON-NLS-1$
         }
         listener.outputLine(Messages.get("console.confirmed")); //$NON-NLS-1$
         IbcmdInvocation forcedApply = builder.apply(true);
@@ -224,6 +234,23 @@ public final class UploadOperation
             throw new UploadCancelledException();
         }
         return result;
+    }
+
+    private boolean asksForConfirmation()
+    {
+        IInfobasePreferencesManager preferences = Services.get(IInfobasePreferencesManager.class);
+        if (preferences == null)
+        {
+            return true;
+        }
+        try
+        {
+            return preferences.getPromptConfirmationOnRestructure(target.infobase().getUuid());
+        }
+        catch (RuntimeException e)
+        {
+            return true;
+        }
     }
 
     private void checkCancelled(IProgressMonitor monitor) throws UploadCancelledException
