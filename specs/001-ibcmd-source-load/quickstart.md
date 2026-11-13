@@ -100,6 +100,23 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 
 Если используется своя launch-конфигурация: на вкладке **Main** выберите **Run a product** → `com._1c.g5.v8.dt.product.application.rcp`, а VM arguments возьмите из `plugin.launch`. После смены продукта удалите старый runtime-workspace (`../runtime-New_configuration`) и создайте проект заново.
 
+
+## Установка через p2-director (если Install New Software не регистрирует бандл)
+
+В некоторых сборках EDT Lite (`1cestart`) после p2-установки `configuration/org.eclipse.equinox.simpleconfigurator/bundles.info` не обновляется, и плагин не загружается. Надёжный способ — установить/обновить headless-director'ом при закрытой EDT:
+
+```bash
+ECLIPSE="/Users/nikita.ivanchenko/Library/Application Support/1C/1cedtstart/installations/Eclipse для разработки плагинов 1C_EDT 2025-12/eclipse.app/Contents/MacOS/eclipse"
+"$ECLIPSE" -nosplash -consoleLog \
+  -vm "/Applications/1C/1CE/components/axiom-jdk-full-25.0.2+12-x86_64/bin/java" \
+  -application org.eclipse.equinox.p2.director \
+  -repository "file:/Users/nikita.ivanchenko/Documents/repos/github/fastsync/repositories/io.github.fastsync.edt.repository/target/repository" \
+  -installIU io.github.fastsync.edt.feature.feature.group \
+  -destination "file:/Users/nikita.ivanchenko/Library/Application Support/1C/1cedtstart/installations/1C_EDT (Lite) 2026.2/1cedt.app/Contents/Eclipse"
+```
+
+Директор обновляет `bundles.info` сам. Перед запуском EDT должна быть закрыта.
+
 ## Ожидаемые артефакты после реализации
 
 - `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/**` — команда, диалог, orchestrator, resolver, exporter, session guard, ibcmd runner, sync updater, report, messages.

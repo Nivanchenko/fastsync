@@ -87,6 +87,8 @@ Self-hosted PDE-запуск EDT на Java 25 нестабилен (`PlatformPlu
 
 Плагин собран под EDT 2026.2.2 / Java 25; в более старые EDT (2025.x) он не установится по BREE. Для итераций после изменения кода: пересобрать p2 и повторить установку/обновление (**Help → Installation Details → Update**).
 
+> Если после установки команда не появилась: в некоторых сборках EDT Lite (`1cestart`) p2 не обновляет `configuration/.../bundles.info`, и бандл не загружается. Установите/обновите плагин headless p2-director'ом (команда — в [quickstart.md](specs/001-ibcmd-source-load/quickstart.md), раздел «Установка через p2-director»).
+
 ## Структура
 
 ```text
