@@ -96,6 +96,8 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 - JRE **JavaSE-25** — должно резолвиться в x86_64 JDK 25 (см. диагностику SWT выше);
 - полный набор `--add-opens`/`--add-modules` и `-D`-аргументов из `1cedt.ini` EDT 2026.2.
 
+Если вы уже запускали PDE-конфигурацию раньше, Eclipse сохранил её (например, `New_configuration.launch`) с `product=org.eclipse.platform.ide` — он не переиспользует настройки из `plugin.launch`. Поменяйте продукт в этой конфигурации или удалите её и запустите `plugin.launch` заново.
+
 Если используется своя launch-конфигурация: на вкладке **Main** выберите **Run a product** → `com._1c.g5.v8.dt.product.application.rcp`, а VM arguments возьмите из `plugin.launch`. После смены продукта удалите старый runtime-workspace (`../runtime-New_configuration`) и создайте проект заново.
 
 ## Ожидаемые артефакты после реализации
