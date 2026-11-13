@@ -113,9 +113,12 @@ public final class TargetResolver
             throw new UploadException("error.ib.path", infobasePath); //$NON-NLS-1$
         }
 
-        String requiredVersion = application.getRequiredVersion()
-            .filter(version -> !version.isBlank())
-            .orElseThrow(() -> new UploadException("error.no.version")); //$NON-NLS-1$
+        IV8Project v8Project = service(projectManager, IV8ProjectManager.class, "IV8ProjectManager") //$NON-NLS-1$
+            .getProject(project);
+        if (v8Project == null || v8Project.getVersion() == null)
+        {
+            throw new UploadException("error.no.version"); //$NON-NLS-1$
+        }
 
         List<RuntimeInstallation> installations = installationManager == null
             ? enterpriseInstallations() : installationManager.getAllRegistered();
@@ -123,12 +126,36 @@ public final class TargetResolver
         {
             throw new UploadException("error.service", "IRuntimeInstallationManager"); //$NON-NLS-1$ //$NON-NLS-2$
         }
-        List<RuntimeInstallation> matches = installations.stream()
-            .filter(RuntimeInstallations.filterByVersion(requiredVersion))
-            .toList();
+
+        // The application version is optional; fall back to the infobase/project version.
+        List<String> candidateVersions = new ArrayList<>();
+        application.getRequiredVersion().filter(version -> !version.isBlank()).ifPresent(candidateVersions::add);
+        addVersion(candidateVersions, infobase.getVersion());
+        addVersion(candidateVersions, infobase.getDefaultVersion());
+        addVersion(candidateVersions, v8Project.getVersion().toString());
+
+        List<RuntimeInstallation> matches = List.of();
+        String requiredVersion = candidateVersions.isEmpty() ? "" : candidateVersions.get(0); //$NON-NLS-1$
+        for (String candidate : candidateVersions)
+        {
+            try
+            {
+                matches = installations.stream().filter(RuntimeInstallations.filterByVersion(candidate)).toList();
+            }
+            catch (RuntimeException e)
+            {
+                matches = List.of();
+            }
+            if (matches.size() == 1)
+            {
+                requiredVersion = candidate;
+                break;
+            }
+        }
         if (matches.size() != 1)
         {
-            throw new UploadException("error.no.installation", requiredVersion); //$NON-NLS-1$
+            throw new UploadException("error.no.installation", //$NON-NLS-1$
+                String.join(", ", candidateVersions)); //$NON-NLS-1$
         }
         RuntimeInstallation installation = matches.get(0);
 
@@ -150,12 +177,6 @@ public final class TargetResolver
             throw new UploadException("error.ibcmd", ibcmd); //$NON-NLS-1$
         }
 
-        IV8Project v8Project = service(projectManager, IV8ProjectManager.class, "IV8ProjectManager") //$NON-NLS-1$
-            .getProject(project);
-        if (v8Project == null || v8Project.getVersion() == null)
-        {
-            throw new UploadException("error.no.version"); //$NON-NLS-1$
-        }
         IDtProject dtProject = service(dtProjectManager, IDtProjectManager.class, "IDtProjectManager") //$NON-NLS-1$
             .getDtProject(project);
 
@@ -216,6 +237,14 @@ public final class TargetResolver
         catch (InvalidSyntaxException e)
         {
             return null;
+        }
+    }
+
+    private static void addVersion(List<String> versions, String version)
+    {
+        if (version != null && !version.isBlank() && !versions.contains(version))
+        {
+            versions.add(version);
         }
     }
 

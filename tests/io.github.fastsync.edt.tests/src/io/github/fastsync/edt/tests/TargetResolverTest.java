@@ -64,6 +64,7 @@ public class TargetResolverTest
     private InfobaseReference infobase;
     private FileConnectionString connectionString;
     private RuntimeInstallation installation;
+    private IV8Project v8Project;
 
     @Before
     public void setUp() throws Exception
@@ -91,7 +92,7 @@ public class TargetResolverTest
         installation = mock(RuntimeInstallation.class);
         ILaunchableRuntimeComponent component = mock(ILaunchableRuntimeComponent.class);
         IDesignerSessionThickClientLauncher launcher = mock(IDesignerSessionThickClientLauncher.class);
-        IV8Project v8Project = mock(IV8Project.class);
+        v8Project = mock(IV8Project.class);
 
         when(applicationManager.getDefaultApplication(project)).thenReturn(Optional.of(application));
         when(application.getInfobase()).thenReturn(infobase);
@@ -161,9 +162,20 @@ public class TargetResolverTest
     }
 
     @Test
-    public void failsWithoutRequiredVersion() throws Exception
+    public void resolvesVersionFromInfobaseWhenApplicationVersionMissing() throws Exception
     {
         when(application.getRequiredVersion()).thenReturn(Optional.empty());
+        when(infobase.getVersion()).thenReturn("8.3.27.2342");
+
+        UploadTarget target = resolver().resolve(project, new NullProgressMonitor());
+
+        assertEquals("8.3.27.2342", target.requiredVersion());
+    }
+
+    @Test
+    public void failsWithoutProjectVersion() throws Exception
+    {
+        when(v8Project.getVersion()).thenReturn(null);
 
         assertFailure("error.no.version");
     }
