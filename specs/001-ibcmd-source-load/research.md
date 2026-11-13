@@ -115,3 +115,11 @@
 
 - Расширения конфигурации, клиент-серверные/веб-ИБ, создание ИБ, миграция данных, принудительное завершение сеансов, автоматическое повышение версии формата выгрузки.
 - Никаких новых зависимостей: JDK `ProcessBuilder`, SWT/JFace, Eclipse console.
+
+## R11. Уточнения, полученные при реализации и E2E (EDT 2026.2.2, ibcmd 8.3.27)
+
+- **Версия платформы**: `IApplication#getRequiredVersion()` часто пуст, поэтому используется цепочка приложение → `InfobaseReference#getVersion/getDefaultVersion` → `IV8Project#getVersion`. Если ED-API `IResolvableRuntimeInstallationManager#resolveByProjectAndInfobase(...)` доступен, установка берётся у EDT; иначе при нескольких билдах одной линейки выбирается новейший (8.3.27.2342).
+- **Экспорт исходников**: `IExportOperationFactory` — Guice-биндинг внутри EDT, не OSGi-сервис; рабочий путь — публичная точка расширения `com._1c.g5.v8.dt.export.exportService` (`IExportService#work`) + `OrdinaryDirectoryBuilder`. `IExportServiceRegistry` через `ServiceAccess` тоже недоступен.
+- **Состояние синхронизации**: `IInfobaseSynchronizationStateManager` доступен через `ServiceAccess`; `loadActualConfigDumpInfo(Path)` ожидает **каталог** (внутри ищется `ConfigDumpInfo.xml`) или zip-архив, но не сам XML-файл — иначе он трактуется как zip и падает.
+- **`config apply` и подтверждения**: интерактивный запрос структуры БД (`[y/n]`) в полной загрузке даёт код 255 при закрытом stdin; в частичной загрузке после `import files --partial` тот же смысл может приходить кодом **102**. Плагин считает подтверждением наличия `[y/n]`/«Принять изменения»/«продолжить обновление», код 102, а также warning-маркеры. Политика `--force` привязана к настройке ИБ `IInfobasePreferencesManager#getPromptConfirmationOnRestructure(uuid)`: включена — спрашиваем, выключена — повторяем с `--force` автоматически (как штатная загрузка EDT). Сеансы не завершаются, `--session-terminate=force` не используется.
+- **Версия Java 25 и PDE**: self-hosted запуск EDT требует продукта `com._1c.g5.v8.dt.product.application.rcp` и полного набора `--add-opens`; без `--add-opens=java.base/java.nio=ALL-UNNAMED` падает 1C BM/Ignite. В установленной EDT 2026.2 команда проверена после ручной регистрации бандла в `bundles.info` (1cestart не обновил его после p2-установки).

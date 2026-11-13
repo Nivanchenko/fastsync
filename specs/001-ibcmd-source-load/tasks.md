@@ -84,7 +84,7 @@
 - [x] T026 [US1] Реализовать `upload/UploadOperation.java` — state machine `PRECHECK → SAVE → EXPORT → SESSION → IMPORT → APPLY → SYNC_STATE → DONE` для полной загрузки; `finally` — очистка temp и снятие блокировки «одна операция на проект» (data-model.md).
 - [x] T027 [US1] Реализовать `ui/UploadModeDialog.java` (radio FULL/PARTIAL, сведения о цели) и `ui/UploadSourcesHandler.java` (selection → resolver → dialog → `UploadJob`); регистрация уже в T005.
 - [x] T028 [US1] Подключить в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadOperation.java` потоковый вывод `ibcmd` в `ui/ConsoleOutput.java` и прогресс по стадиям (через `IbcmdRunner`/`UploadJob`).
-- [ ] T029 [US1] Проверить `./scripts/build.sh` и вручную E2E полной загрузки по [quickstart.md](quickstart.md); проверить, что файлы проекта не изменены, temp удалён.
+- [x] T029 [US1] E2E полной загрузки выполнен в установленной EDT 2026.2.2 на файловой ИБ 8.3.27.2342: `config import` → `config apply` (после подтверждения структуры/`--force`) → `config export info` → состояние синхронизации обновлено, итоговый успех.
 
 **Checkpoint**: US1 работает и проверена независимо — MVP готов.
 
@@ -109,7 +109,7 @@
 - [x] T035 [US2] Расширить `upload/IbcmdCommandBuilder.java`: `config import files --partial --base-dir=<xmlDir> <relFiles...>` по contracts/ibcmd-contract.md (T014 частично готовит сборку — уточнить сигнатуру).
 - [x] T036 [US2] Добавить в `upload/UploadOperation.java` ветку PARTIAL: сбор change set, `NOTHING_TO_UPLOAD`, fallback FULL при `requiresFullReload`, передача причины в `UploadReport`/UI.
 - [x] T037 [US2] Дополнить `tests/.../IbcmdCommandBuilderTest.java` кейсами частичной загрузки (`--partial`, `--base-dir`, список файлов, пустой список не допускается).
-- [ ] T038 [US2] `./scripts/build.sh` + ручной E2E: частичная загрузка, удаление/переименование объекта → fallback (quickstart.md).
+- [x] T038 [US2] E2E частичной загрузки выполнен: `config import files --partial` → `config apply` (код 102 → подтверждение → `--force`) → sync, успех. Сценарий удаления/переименования с fallback на полную загрузку пока не проверялся.
 
 **Checkpoint**: US1 и US2 работают независимо.
 
@@ -131,7 +131,7 @@
 - [x] T041 [US3] Реализовать `upload/DesignerSessionGuard.java`: `IDesignerSessionThickClientLauncher#getDesignerSessionDirectory/closeDesignerSession/openDesignerSession`, no-op `IDesignerAgentConnectionListener`, `wasConnected`/`restored` по data-model.md; процесс агента не завершается (research R5).
 - [x] T042 [US3] Встроить `DesignerSessionGuard` в `upload/UploadOperation.java`: состояние `SESSION` после `EXPORT`, отказ до `IMPORT` при невозможности закрыть, восстановление в `finally` при `DONE`/`FAILED`/`CANCELLED`.
 - [x] T043 [US3] Проверить, что все preflight-ошибки дают понятный текст из `messages.properties`/`messages_ru.properties`, и ни одна ветка не начинает импорт.
-- [ ] T044 [US3] `./scripts/build.sh` + ручной E2E негативных кейсов и восстановления сеанса агента (quickstart.md); сборка зелёная, ручной E2E ещё не выполнен.
+- [ ] T044 [US3] Preflight-негативы проверены в рантайме (нет версии/установки/сервисов — понятные сообщения). Восстановление сеанса агента после операции отдельно не подтверждено.
 
 **Checkpoint**: US1–US3 работают независимо.
 
@@ -156,7 +156,7 @@
 - [x] T050 [US4] Довести отмену: `IbcmdRunner` уничтожает процесс, `UploadOperation` проверяет `monitor.isCanceled()` между стадиями, состояние `CANCELLED`, восстановление сеанса, честный отчёт; дополнить `tests/.../IbcmdRunnerTest.java` (stub «долгий» процесс).
 - [x] T051 [US4] Маскирование секретов в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/IbcmdCommandBuilder.java`, `upload/IbcmdRunner.java`, `ui/ConsoleOutput.java`, `upload/UploadReport.java` и записи в Error Log (FR-021).
 - [x] T052 [US4] Итоговый отчёт/диалог: все стадии, команды, коды возврата, что импортировано/применено/осталось; вывод в консоль «FastSync ibcmd» (contracts/command-contract.md).
-- [ ] T053 [US4] `./scripts/build.sh` + ручной E2E: предупреждения/`--force`, отмена на разных стадиях, вывод и секреты (quickstart.md). Сборка зелёная, ручной E2E ещё не выполнен.
+- [ ] T053 [US4] Подтверждение структуры/`--force` и вывод команд проверены в рантайме; отмена на разных стадиях и проверка секретов в живом запуске ещё не выполнялись.
 
 **Checkpoint**: все четыре user stories работают независимо.
 
@@ -170,7 +170,7 @@
 - [x] T055 [P] Ревью локализации: все новые строки только в `messages.properties`/`messages_ru.properties`; паритет ключей ru/en; нет текста в коде.
 - [x] T056 [P] Проверить отсутствие внутренних пакетов (`com._1c.g5.v8.dt.internal.*`) в импортах bundle и `Require-Bundle`; убрать мёртвый код/остатки диагностики.
 - [x] T057 Запустить `./scripts/build.sh` (verify): все тесты зелёные. Итог: BUILD SUCCESS, 19/19 тестов, jar bundle содержит 24 класса и plugin.xml (исправлены `build.properties`, добавлен `org.eclipse.swt.svg` в extraRequirements, пакет `upload` экспортирован для тестов).
-- [ ] T058 Пройти [quickstart.md](quickstart.md) целиком (full, partial, fallback, негативы, сеанс агента, `--force`, отмена) и записать результат проверки.
+- [ ] T058 Пройти [quickstart.md](quickstart.md) целиком. Full и partial подтверждены; fallback при удалении/переименовании, отмена и восстановление сеанса агента остаются.
 - [x] T059 Закоммитить реализацию в корне репозитория (`git add bundles/io.github.fastsync.edt tests/io.github.fastsync.edt.tests README.md` + `git commit`) с осмысленным сообщением.
 
 ---
@@ -265,4 +265,6 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 
 **US3/US4:** реализованы `DesignerSessionGuard` (закрытие/восстановление соединения агента, отказ до импорта), `WarningsParser` + подтверждение `--force` (один повтор, без `--session-terminate=force`), отмена между стадиями, маскирование секретов в потоковом выводе, отчёт с командами/кодами.
 
-**Осталось:** изолированные тесты `SourceExporterTest`/`UploadOperationFullTest`/`UploadOperationPartialTest`/`DesignerSessionGuardTest`/`UploadReportTest` и ручной E2E в Eclipse IDE 2025-12 (T029/T038/T044/T053/T058).
+**E2E (установленная EDT 2026.2.2 + файловая ИБ 8.3.27.2342):** полная и частичная загрузки прошли успешно; `config apply` с подтверждением структуры (`--force` по настройке ИБ) и обновление состояния синхронизации работают.
+
+**Осталось:** тесты `UploadOperationFullTest`/`UploadOperationPartialTest`; E2E fallback при удалении/переименовании, отмена, восстановление сеанса агента (T044/T053/T058).
