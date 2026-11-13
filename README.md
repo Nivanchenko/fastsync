@@ -54,6 +54,8 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 2. Откройте `targets/default/default.target` в Target Editor, авторизуйтесь учётной записью с доступом к p2-репозиторию 1С и выберите **Set as Active Target Platform**. Не сохраняйте учётные данные в репозитории.
 3. Запустите **Run As → Eclipse Application** для проекта `io.github.fastsync.edt`.
 
+> Если при запуске возникает `UnsatisfiedLinkError` про SWT (`have 'x86_64', need 'arm64'`): IDE и target-платформа — x86_64, а launch configuration взяла arm64 JDK. Добавьте в **Preferences → Java → Installed JREs** x86_64 JDK 25 (`/Applications/1C/1CE/components/axiom-jdk-full-25.0.2+12-x86_64`) и выберите его в **Run Configurations → JRE → Alternate JRE**.
+
 ## Использование
 
 1. В EDT откройте проект, привязанный к файловой ИБ (приложение проекта содержит ИБ и требуемую версию платформы).

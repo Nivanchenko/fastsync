@@ -65,6 +65,21 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 - В консоли/логе нет паролей даже при их наличии в настройках ИБ; пароль не сохраняется плагином.
 - Для каждой команды видны аргументы (с маскированием), вывод и код возврата.
 
+
+## Диагностика: Run As → Eclipse Application и ошибка SWT (`UnsatisfiedLinkError`)
+
+Симптом: `Could not load SWT library ... (have 'x86_64', need 'arm64e' or 'arm64')`.
+
+Причина: Eclipse IDE для разработки плагинов 1C_EDT 2025-12 и target-платформа — **x86_64**, в bundle pool резолвится `org.eclipse.swt.cocoa.macosx.x86_64`. Если launch configuration берёт **arm64** JDK (например, Zulu 25 для Apple Silicon), SWT не загружается.
+
+Решение:
+1. **Preferences → Java → Installed JREs → Add → Standard VM** → указать x86_64 JDK 25:
+   `/Applications/1C/1CE/components/axiom-jdk-full-25.0.2+12-x86_64`
+2. **Run → Run Configurations… → Eclipse Application → JRE** → **Alternate JRE** → выбрать этот JDK (либо сделать его JRE по умолчанию в workspace).
+3. Перезапустить конфигурацию.
+
+Альтернатива — перевести target/запуск на `aarch64` (потребуются `org.eclipse.swt.cocoa.macosx.aarch64` и arm64 JDK); для текущей x86_64-сборки EDT это не требуется.
+
 ## Ожидаемые артефакты после реализации
 
 - `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/**` — команда, диалог, orchestrator, resolver, exporter, session guard, ibcmd runner, sync updater, report, messages.
