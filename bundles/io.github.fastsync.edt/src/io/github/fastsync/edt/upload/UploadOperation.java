@@ -6,15 +6,16 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 
 import io.github.fastsync.edt.Messages;
+import io.github.fastsync.edt.ui.ForceConfirmation;
 
 /** Runs one upload operation: save, convert, import with ibcmd, apply and sync EDT state. */
 public final class UploadOperation
@@ -24,13 +25,21 @@ public final class UploadOperation
     private final IProject project;
     private final UploadTarget target;
     private final UploadMode requestedMode;
+    private final Predicate<String> forceConfirmation;
     private final UploadReport report = new UploadReport();
 
     public UploadOperation(IProject project, UploadTarget target, UploadMode requestedMode)
     {
+        this(project, target, requestedMode, new ForceConfirmation()::confirm);
+    }
+
+    public UploadOperation(IProject project, UploadTarget target, UploadMode requestedMode,
+        Predicate<String> forceConfirmation)
+    {
         this.project = project;
         this.target = target;
         this.requestedMode = requestedMode;
+        this.forceConfirmation = forceConfirmation;
     }
 
     public IProject getProject()
@@ -58,6 +67,7 @@ public final class UploadOperation
         }
         Path operationDirectory = null;
         SyncFlowSession session = null;
+        DesignerSessionGuard designerSession = null;
         try
         {
             operationDirectory = Files.createTempDirectory("fastsync-upload-"); //$NON-NLS-1$
@@ -67,6 +77,7 @@ public final class UploadOperation
             SourceExporter exporter = new SourceExporter();
 
             report.setStage(UploadStage.SAVE);
+            checkCancelled(monitor);
             saveProject(monitor);
 
             report.setStage(UploadStage.CHANGES);
@@ -92,12 +103,19 @@ public final class UploadOperation
             report.setActualMode(full ? UploadMode.FULL : UploadMode.PARTIAL);
 
             report.setStage(UploadStage.EXPORT);
+            checkCancelled(monitor);
             Path xmlDirectory = operationDirectory.resolve("xml"); //$NON-NLS-1$
             SourceExporter.ExportResult export = full
                 ? exporter.exportFull(project, target, xmlDirectory, monitor)
                 : exporter.exportPartial(project, target, changes, xmlDirectory, monitor);
 
+            report.setStage(UploadStage.SESSION);
+            checkCancelled(monitor);
+            designerSession = new DesignerSessionGuard(target);
+            designerSession.closeSession();
+
             report.setStage(UploadStage.IMPORT);
+            checkCancelled(monitor);
             IbcmdRunner.Result importResult = runCommand(runner,
                 full ? builder.importFull(export.directory())
                     : builder.importPartial(export.directory(), export.files()),
@@ -108,13 +126,11 @@ public final class UploadOperation
             }
 
             report.setStage(UploadStage.APPLY);
-            IbcmdRunner.Result applyResult = runCommand(runner, builder.apply(false), monitor, listener);
-            if (applyResult.exitCode() != 0)
-            {
-                throw new UploadException("error.apply", applyResult.exitCode()); //$NON-NLS-1$
-            }
+            checkCancelled(monitor);
+            applyConfiguration(runner, builder, monitor, listener);
 
             report.setStage(UploadStage.SYNC_STATE);
+            checkCancelled(monitor);
             Path dumpDirectory = operationDirectory.resolve("dump"); //$NON-NLS-1$
             Files.createDirectories(dumpDirectory);
             runCommand(runner, builder.exportInfo(dumpDirectory), monitor, listener);
@@ -138,6 +154,17 @@ public final class UploadOperation
         }
         finally
         {
+            if (designerSession != null)
+            {
+                try
+                {
+                    designerSession.restore();
+                }
+                catch (UploadException e)
+                {
+                    report.appendSummary(e.getLocalizedMessage());
+                }
+            }
             if (session != null)
             {
                 session.close();
@@ -146,6 +173,34 @@ public final class UploadOperation
             ACTIVE.remove(key);
         }
         return report;
+    }
+
+    private void applyConfiguration(IbcmdRunner runner, IbcmdCommandBuilder builder, IProgressMonitor monitor,
+        IbcmdRunner.Listener listener) throws UploadException
+    {
+        IbcmdRunner.Result result = runCommand(runner, builder.apply(false), monitor, listener);
+        if (result.exitCode() == 0)
+        {
+            return;
+        }
+        String output = result.output();
+        if (WarningsParser.mentionsSessionTermination(output))
+        {
+            throw new UploadException("error.sessionsBlocked"); //$NON-NLS-1$
+        }
+        if (!WarningsParser.requiresConfirmation(output))
+        {
+            throw new UploadException("error.apply", result.exitCode()); //$NON-NLS-1$
+        }
+        if (!forceConfirmation.test(output))
+        {
+            throw new UploadException("report.importedNotApplied"); //$NON-NLS-1$
+        }
+        IbcmdRunner.Result forced = runCommand(runner, builder.apply(true), monitor, listener);
+        if (forced.exitCode() != 0)
+        {
+            throw new UploadException("error.apply", forced.exitCode()); //$NON-NLS-1$
+        }
     }
 
     private IbcmdRunner.Result runCommand(IbcmdRunner runner, IbcmdInvocation invocation, IProgressMonitor monitor,
@@ -162,6 +217,14 @@ public final class UploadOperation
         return result;
     }
 
+    private void checkCancelled(IProgressMonitor monitor) throws UploadCancelledException
+    {
+        if (monitor.isCanceled())
+        {
+            throw new UploadCancelledException();
+        }
+    }
+
     private void saveProject(IProgressMonitor monitor) throws UploadException
     {
         Display display = Display.getDefault();
@@ -175,10 +238,7 @@ public final class UploadOperation
         {
             throw new UploadException("error.save"); //$NON-NLS-1$
         }
-        if (monitor.isCanceled())
-        {
-            throw new UploadCancelledException();
-        }
+        checkCancelled(monitor);
     }
 
     private static void deleteTree(Path directory)

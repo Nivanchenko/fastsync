@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -50,7 +51,7 @@ public final class IbcmdRunner
                 output.append(line).append('\n');
                 if (listener != null)
                 {
-                    listener.outputLine(line);
+                    listener.outputLine(mask(line, invocation));
                 }
             }
             int exitCode = process.waitFor();
@@ -67,6 +68,26 @@ public final class IbcmdRunner
             terminate(process);
             throw new UploadCancelledException();
         }
+    }
+
+    private static String mask(String line, IbcmdInvocation invocation)
+    {
+        String masked = line;
+        List<String> arguments = invocation.arguments();
+        for (int index : invocation.secretIndexes())
+        {
+            String argument = arguments.get(index);
+            int separator = argument.indexOf('=');
+            if (separator >= 0)
+            {
+                String secret = argument.substring(separator + 1);
+                if (!secret.isEmpty())
+                {
+                    masked = masked.replace(secret, "***");
+                }
+            }
+        }
+        return masked;
     }
 
     public static void terminate(Process process)

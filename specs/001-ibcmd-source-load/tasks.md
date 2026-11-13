@@ -123,15 +123,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T039 [P] [US3] `tests/.../DesignerSessionGuardTest.java` — `wasConnected=false` → не открывать; `true` → close+open; ошибка close → отказ до импорта; ошибка open после операции → ошибка восстановления, процесс не убивается.
-- [ ] T040 [P] [US3] `tests/.../UploadSourcesHandlerTest.java` — негативный preflight: показывается локализованное сообщение, `UploadJob` не запускается.
+- [ ] T039 [P] [US3] `tests/.../DesignerSessionGuardTest.java` — нужен; guard реализован, но изолированный тест ещё не написан (проверяется E2E).
+- [x] T040 [P] [US3] `tests/.../UploadSourcesHandlerTest.java` — негативный preflight: показывается локализованное сообщение, `UploadJob` не запускается.
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Реализовать `upload/DesignerSessionGuard.java`: `IDesignerSessionThickClientLauncher#getDesignerSessionDirectory/closeDesignerSession/openDesignerSession`, no-op `IDesignerAgentConnectionListener`, `wasConnected`/`restored` по data-model.md; процесс агента не завершается (research R5).
-- [ ] T042 [US3] Встроить `DesignerSessionGuard` в `upload/UploadOperation.java`: состояние `SESSION` после `EXPORT`, отказ до `IMPORT` при невозможности закрыть, восстановление в `finally` при `DONE`/`FAILED`/`CANCELLED`.
-- [ ] T043 [US3] Проверить, что все preflight-ошибки дают понятный текст из `messages.properties`/`messages_ru.properties`, и ни одна ветка не начинает импорт.
-- [ ] T044 [US3] `./scripts/build.sh` + ручной E2E негативных кейсов и восстановления сеанса агента (quickstart.md); проверить неизменность файлов ИБ.
+- [x] T041 [US3] Реализовать `upload/DesignerSessionGuard.java`: `IDesignerSessionThickClientLauncher#getDesignerSessionDirectory/closeDesignerSession/openDesignerSession`, no-op `IDesignerAgentConnectionListener`, `wasConnected`/`restored` по data-model.md; процесс агента не завершается (research R5).
+- [x] T042 [US3] Встроить `DesignerSessionGuard` в `upload/UploadOperation.java`: состояние `SESSION` после `EXPORT`, отказ до `IMPORT` при невозможности закрыть, восстановление в `finally` при `DONE`/`FAILED`/`CANCELLED`.
+- [x] T043 [US3] Проверить, что все preflight-ошибки дают понятный текст из `messages.properties`/`messages_ru.properties`, и ни одна ветка не начинает импорт.
+- [ ] T044 [US3] `./scripts/build.sh` + ручной E2E негативных кейсов и восстановления сеанса агента (quickstart.md); сборка зелёная, ручной E2E ещё не выполнен.
 
 **Checkpoint**: US1–US3 работают независимо.
 
@@ -145,18 +145,18 @@
 
 ### Tests for User Story 4
 
-- [ ] T045 [P] [US4] `tests/.../WarningsParserTest.java` — распознавание «нужно подтверждение/предупреждение» из вывода/кода, отсутствие `--session-terminate=force`.
-- [ ] T046 [P] [US4] `tests/.../SecretsMaskingTest.java` — пароль не попадает в вывод консоли, `UploadReport`, `toString()` команд и лог.
+- [x] T045 [P] [US4] `tests/.../WarningsParserTest.java` — распознавание «нужно подтверждение/предупреждение» из вывода/кода, отсутствие `--session-terminate=force`.
+- [x] T046 [P] [US4] `tests/.../SecretsMaskingTest.java` — пароль не попадает в вывод консоли, `UploadReport`, `toString()` команд и лог.
 - [ ] T047 [P] [US4] `tests/.../UploadReportTest.java` — отчёт содержит режим, ИБ, все команды и коды, что применено/не применено.
 
 ### Implementation for User Story 4
 
-- [ ] T048 [US4] Реализовать `upload/WarningsParser.java`: анализ вывода/кода `config apply`, признак необходимости `--force`; правило — один повтор после подтверждения.
-- [ ] T049 [US4] Реализовать `ui/ConfirmForceDialog.java` и встроить в `upload/UploadOperation.java`: при отказе — «импортировано, но не применено», sync state не обновляется; при согласии — `config apply --force` один раз.
-- [ ] T050 [US4] Довести отмену: `IbcmdRunner` уничтожает процесс, `UploadOperation` проверяет `monitor.isCanceled()` между стадиями, состояние `CANCELLED`, восстановление сеанса, честный отчёт; дополнить `tests/.../IbcmdRunnerTest.java` (stub «долгий» процесс).
-- [ ] T051 [US4] Маскирование секретов в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/IbcmdCommandBuilder.java`, `upload/IbcmdRunner.java`, `ui/ConsoleOutput.java`, `upload/UploadReport.java` и записи в Error Log (FR-021).
-- [ ] T052 [US4] Итоговый отчёт/диалог: все стадии, команды, коды возврата, что импортировано/применено/осталось; вывод в консоль «FastSync ibcmd» (contracts/command-contract.md).
-- [ ] T053 [US4] `./scripts/build.sh` + ручной E2E: предупреждения/`--force`, отмена на разных стадиях, вывод и секреты (quickstart.md).
+- [x] T048 [US4] Реализовать `upload/WarningsParser.java`: анализ вывода/кода `config apply`, признак необходимости `--force`; правило — один повтор после подтверждения.
+- [x] T049 [US4] Реализовать `ui/ConfirmForceDialog.java` и встроить в `upload/UploadOperation.java`: при отказе — «импортировано, но не применено», sync state не обновляется; при согласии — `config apply --force` один раз.
+- [x] T050 [US4] Довести отмену: `IbcmdRunner` уничтожает процесс, `UploadOperation` проверяет `monitor.isCanceled()` между стадиями, состояние `CANCELLED`, восстановление сеанса, честный отчёт; дополнить `tests/.../IbcmdRunnerTest.java` (stub «долгий» процесс).
+- [x] T051 [US4] Маскирование секретов в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/IbcmdCommandBuilder.java`, `upload/IbcmdRunner.java`, `ui/ConsoleOutput.java`, `upload/UploadReport.java` и записи в Error Log (FR-021).
+- [x] T052 [US4] Итоговый отчёт/диалог: все стадии, команды, коды возврата, что импортировано/применено/осталось; вывод в консоль «FastSync ibcmd» (contracts/command-contract.md).
+- [ ] T053 [US4] `./scripts/build.sh` + ручной E2E: предупреждения/`--force`, отмена на разных стадиях, вывод и секреты (quickstart.md). Сборка зелёная, ручной E2E ещё не выполнен.
 
 **Checkpoint**: все четыре user stories работают независимо.
 
@@ -261,6 +261,8 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 
 **Сделано:** каркас сборки (Tycho 5.0.2 / Java 25 / EDT 2026.2 + Eclipse 2025-12), команда и меню, NLS ru/en, модели (`UploadTarget`, `UploadReport`, `ChangeSet`), `TargetResolver` с preflight, `IbcmdCommandBuilder`/`IbcmdRunner` (полная/частичная загрузка, `config apply`, `config export info`, маскирование пароля, отмена), `SourceExporter` (полный/частичный экспорт), `SyncFlowSession` (change set + state sync через публичный v2-flow), `UploadOperation` (state machine), `UploadJob`, диалог режима, консоль, README, тесты (`ChangeSetTest`, `IbcmdCommandBuilderTest`, `IbcmdRunnerTest`, `TargetResolverTest`) — 16/16 проходят локально, bundle компилируется `javac --release 25` против EDT 2026.2.2.
 
-**Сборка:** `mvn verify` по Tycho 5.0.2 проходит: BUILD SUCCESS, 19/19 PDE-тестов (TargetResolver, IbcmdCommandBuilder, ChangeSet, IbcmdRunner, PluginBundle, RuntimeInstallations), p2-репозиторий собран.
+**Сборка:** `mvn verify` по Tycho 5.0.2 проходит: BUILD SUCCESS, 22/22 PDE-теста, p2-репозиторий собран.
 
-**Осталось:** `--force`-подтверждение и US4-наблюдаемость, `DesignerSessionGuard` (US3), отдельные тесты `SourceExporterTest`/`UploadOperationFullTest`/`UploadOperationPartialTest`, ручной E2E (T029/T038/T058).
+**US3/US4:** реализованы `DesignerSessionGuard` (закрытие/восстановление соединения агента, отказ до импорта), `WarningsParser` + подтверждение `--force` (один повтор, без `--session-terminate=force`), отмена между стадиями, маскирование секретов в потоковом выводе, отчёт с командами/кодами.
+
+**Осталось:** изолированные тесты `SourceExporterTest`/`UploadOperationFullTest`/`UploadOperationPartialTest`/`DesignerSessionGuardTest`/`UploadReportTest` и ручной E2E в Eclipse IDE 2025-12 (T029/T038/T044/T053/T058).

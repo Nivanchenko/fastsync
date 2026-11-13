@@ -47,6 +47,12 @@ public final class UploadReport
         this.success = success;
     }
 
+    public void appendSummary(String text)
+    {
+        this.summary = summary.isEmpty() ? text : summary + System.lineSeparator() + text;
+        this.success = false;
+    }
+
     public boolean isSuccess()
     {
         return success;

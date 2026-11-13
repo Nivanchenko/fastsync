@@ -55,6 +55,21 @@ public class IbcmdRunnerTest
     }
 
     @Test
+    public void masksSecretArgumentsInStreamedOutput() throws Exception
+    {
+        Path script = script("#!/bin/sh\necho \"$@\"\n");
+        List<String> lines = new ArrayList<>();
+
+        new IbcmdRunner().run(new IbcmdInvocation(List.of(script.toString(), "--password=secret"),
+            Set.of(1)), new NullProgressMonitor(), lines::add);
+
+        for (String line : lines)
+        {
+            assertTrue(!line.contains("secret"));
+        }
+    }
+
+    @Test
     public void runningProcessIsNotCancelled() throws Exception
     {
         Path script = script("#!/bin/sh\nexit 0\n");
