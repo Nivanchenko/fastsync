@@ -134,7 +134,7 @@ public final class UploadOperation
             Path dumpDirectory = operationDirectory.resolve("dump"); //$NON-NLS-1$
             Files.createDirectories(dumpDirectory);
             runCommand(runner, builder.exportInfo(dumpDirectory), monitor, listener);
-            session.loadActualConfigDumpInfo(dumpDirectory.resolve("ConfigDumpInfo.xml")); //$NON-NLS-1$
+            session.loadActualConfigDumpInfo(dumpDirectory);
             session.finish();
 
             report.setStage(UploadStage.DONE);

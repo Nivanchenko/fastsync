@@ -53,7 +53,7 @@ public final class SyncFlowSession implements AutoCloseable
         }
         catch (RuntimeException e)
         {
-            throw new UploadException(e, "error.sync"); //$NON-NLS-1$
+            throw new UploadException(e, "error.sync", e.getMessage()); //$NON-NLS-1$
         }
     }
 
@@ -72,7 +72,7 @@ public final class SyncFlowSession implements AutoCloseable
         }
         catch (RuntimeException e)
         {
-            throw new UploadException(e, "error.sync"); //$NON-NLS-1$
+            throw new UploadException(e, "error.sync", e.getMessage()); //$NON-NLS-1$
         }
         finally
         {
@@ -91,7 +91,7 @@ public final class SyncFlowSession implements AutoCloseable
         }
         catch (RuntimeException e)
         {
-            throw new UploadException(e, "error.sync"); //$NON-NLS-1$
+            throw new UploadException(e, "error.sync", e.getMessage()); //$NON-NLS-1$
         }
     }
 
@@ -104,7 +104,7 @@ public final class SyncFlowSession implements AutoCloseable
         }
         catch (RuntimeException e)
         {
-            throw new UploadException(e, "error.sync"); //$NON-NLS-1$
+            throw new UploadException(e, "error.sync", e.getMessage()); //$NON-NLS-1$
         }
     }
 
