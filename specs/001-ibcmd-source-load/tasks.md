@@ -274,3 +274,5 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 ## Phase 8: Application-scoped command (follow-up)
 
 - [x] T060 [US1] Добавить команду в контекстное меню приложения (`IApplication`): `UploadSourcesHandler` принимает выделенное приложение, `TargetResolver#resolve(IProject, IApplication, IMonitor)` обновляет именно его ИБ; в диалоге показывается имя приложения. Команда из проекта по-прежнему использует приложение по умолчанию. Подтверждено вживую: команда появилась в контекстном меню приложения и работает; сборка + unit-тест `TargetResolverTest#resolvesExplicitlySelectedApplication`.
+
+- [x] T061 [US1] Локализация по языку интерфейса EDT (`Platform.getNL()`): `plugin_ru.properties`/`feature_ru.properties`, `Messages` без fallback на локаль JVM. Подтверждено вживую (русский UI — русские меню и сообщения), сборка + тест `MessagesTest`.
