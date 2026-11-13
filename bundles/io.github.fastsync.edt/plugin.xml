@@ -12,7 +12,7 @@
         commandId="io.github.fastsync.edt.commands.uploadSources"/>
   </extension>
   <extension point="org.eclipse.ui.menus">
-    <menuContribution locationURI="popup:org.eclipse.ui.popup.any?objectClass=com.e1c.g5.dt.applications.IApplication">
+    <menuContribution locationURI="popup:com.e1c.g5.dt.applications.ui.view?after=additions">
       <command
           commandId="io.github.fastsync.edt.commands.uploadSources"
           label="%upload.command.name"
@@ -20,7 +20,7 @@
         <visibleWhen checkEnabled="false">
           <with variable="selection">
             <iterate ifEmpty="false" operator="and">
-              <instanceof value="com.e1c.g5.dt.applications.IApplication"/>
+              <instanceof value="com.e1c.g5.dt.applications.infobases.IInfobaseApplication"/>
             </iterate>
           </with>
         </visibleWhen>
