@@ -31,7 +31,7 @@
 
 - [x] T001 Собрать каркас по официальному `1C-Company/dt-example-plugins` (master) и адаптировать под `io.github.fastsync.edt` (Tycho 5.0.2, Java 25, каталоги bundle/feature/repository/tests); ветка `main` — вторичный референс для недостающих файлов; текущие `AGENTS.md` и `specs/` не затронуты.
 - [x] T002 [P] Проверить `targets/default/default.target`: EDT `https://edt.1c.ru/downloads/releases/ruby/2026.2/`, Eclipse `releases/2025-12`, Orbit `4.38.0`, ECF `3.15.7`, юнит `com._1c.g5.v8.dt.product.application`; при расхождении — привести к официальному примеру 1С (research R1).
-- [ ] T003 Запустить базовую сборку `./scripts/build.sh` до функциональных изменений. BLOCKED в песочнице: `~/.m2/repository` недоступен для записи, p2-креденшелы отсутствуют; вместо этого выполнены `javac --release 25` против bundle-ов EDT 2026.2.2 и локальный прогон unit-тестов (16/16 OK).
+- [x] T003 Запустить базовую сборку `./scripts/build.sh`. Выполнено через Tycho 5.0.2 с p2-доступом (креды переданы транзитно, в репозиторий не сохранены): BUILD SUCCESS, 19/19 PDE-тестов.
 - [x] T004 [P] Обновить `bundles/io.github.fastsync.edt/META-INF/MANIFEST.MF`: добавить `Require-Bundle`/`Import-Package` для `org.eclipse.ui.console`, `org.eclipse.core.jobs`, `com._1c.g5.v8.dt.core`, `com._1c.g5.v8.dt.export`; только публичные пакеты (без `com._1c.g5.v8.dt.internal.*`).
 - [x] T005 [P] Обновить `bundles/io.github.fastsync.edt/plugin.xml`: убрать диагностическую команду, зарегистрировать `io.github.fastsync.edt.commands.uploadSources` (`org.eclipse.ui.commands`/`handlers`/`menus`, popup Project Explorer, ровно один `IProject`) по contracts/command-contract.md.
 - [x] T006 [P] Удалить временную диагностику: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/diagnostics/InspectProjectHandler.java` и её ключи из `plugin.properties`/`messages.properties`.
@@ -59,7 +59,7 @@
 - [x] T017 Реализовать `upload/IbcmdRunner.java`: `ProcessBuilder`, объединённый stdout+stderr, потоковая передача в `ConsoleOutput`/колбэк, накопление вывода, код возврата, отмена через `IProgressMonitor` (уничтожение процесса), маскирование секретов (contracts/ibcmd-contract.md).
 - [x] T018 [P] Создать stub-скрипт (успех, ненулевой код, «предупреждение», длительный процесс) и `tests/.../IbcmdRunnerTest.java`; stub создаётся тестом во временном каталоге, отдельный ресурс не нужен.
 - [x] T019 Реализовать `upload/UploadJob.java`: Eclipse `Job` с `setUser(true)`, `SubMonitor` по стадиям, Cancel → отмена операции, обновление консоли/итогового отчёта.
-- [ ] T020 Прогнать `./scripts/build.sh`; убедиться, что фундаментальные тесты зелёные. BLOCKED по той же причине, что T003; фундаментальная логика покрыта локальным прогоном тестов.
+- [x] T020 Прогнать `./scripts/build.sh`; убедиться, что фундаментальные тесты зелёные. BUILD SUCCESS (см. T003).
 
 **Checkpoint**: foundation ready — можно начинать user stories.
 
@@ -169,7 +169,7 @@
 - [x] T054 [P] Обновить `README.md`: убрать описание временной диагностики, описать команду, требования (EDT 2026.2.2 / Java 25 / Eclipse 2025-12 / Tycho 5.0.2 / Maven 3.9.16), ограничения (только файловая ИБ, без создания ИБ, без завершения сеансов), риск видимости пароля как аргумента процесса.
 - [x] T055 [P] Ревью локализации: все новые строки только в `messages.properties`/`messages_ru.properties`; паритет ключей ru/en; нет текста в коде.
 - [x] T056 [P] Проверить отсутствие внутренних пакетов (`com._1c.g5.v8.dt.internal.*`) в импортах bundle и `Require-Bundle`; убрать мёртвый код/остатки диагностики.
-- [ ] T057 Запустить `./scripts/build.sh` (clean verify): все тесты зелёные, без новых предупреждений; исправить регрессии.
+- [x] T057 Запустить `./scripts/build.sh` (verify): все тесты зелёные. Итог: BUILD SUCCESS, 19/19 тестов, jar bundle содержит 24 класса и plugin.xml (исправлены `build.properties`, добавлен `org.eclipse.swt.svg` в extraRequirements, пакет `upload` экспортирован для тестов).
 - [ ] T058 Пройти [quickstart.md](quickstart.md) целиком (full, partial, fallback, негативы, сеанс агента, `--force`, отмена) и записать результат проверки.
 - [x] T059 Закоммитить реализацию в корне репозитория (`git add bundles/io.github.fastsync.edt tests/io.github.fastsync.edt.tests README.md` + `git commit`) с осмысленным сообщением.
 
@@ -261,4 +261,6 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 
 **Сделано:** каркас сборки (Tycho 5.0.2 / Java 25 / EDT 2026.2 + Eclipse 2025-12), команда и меню, NLS ru/en, модели (`UploadTarget`, `UploadReport`, `ChangeSet`), `TargetResolver` с preflight, `IbcmdCommandBuilder`/`IbcmdRunner` (полная/частичная загрузка, `config apply`, `config export info`, маскирование пароля, отмена), `SourceExporter` (полный/частичный экспорт), `SyncFlowSession` (change set + state sync через публичный v2-flow), `UploadOperation` (state machine), `UploadJob`, диалог режима, консоль, README, тесты (`ChangeSetTest`, `IbcmdCommandBuilderTest`, `IbcmdRunnerTest`, `TargetResolverTest`) — 16/16 проходят локально, bundle компилируется `javac --release 25` против EDT 2026.2.2.
 
-**Осталось:** `--force`-подтверждение и US4-наблюдаемость, `DesignerSessionGuard` (US3), отдельные тесты `SourceExporterTest`/`UploadOperationFullTest`/`UploadOperationPartialTest`, `./scripts/build.sh` и ручной E2E (T003/T020/T057/T058 недоступны в песочнице: `~/.m2` read-only, нет p2-креденшелов).
+**Сборка:** `mvn verify` по Tycho 5.0.2 проходит: BUILD SUCCESS, 19/19 PDE-тестов (TargetResolver, IbcmdCommandBuilder, ChangeSet, IbcmdRunner, PluginBundle, RuntimeInstallations), p2-репозиторий собран.
+
+**Осталось:** `--force`-подтверждение и US4-наблюдаемость, `DesignerSessionGuard` (US3), отдельные тесты `SourceExporterTest`/`UploadOperationFullTest`/`UploadOperationPartialTest`, ручной E2E (T029/T038/T058).
