@@ -26,6 +26,7 @@ Import-Package: org.osgi.framework,
  com._1c.g5.v8.dt.metadata.mdclass,
  com._1c.g5.v8.dt.platform.version,
  org.apache.commons.lang3.tuple
-Export-Package: io.github.fastsync.edt.upload
+Export-Package: io.github.fastsync.edt,
+ io.github.fastsync.edt.upload
 Bundle-RequiredExecutionEnvironment: JavaSE-25
 Automatic-Module-Name: io.github.fastsync.edt
