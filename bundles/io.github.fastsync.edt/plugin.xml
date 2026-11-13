@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+  <extension point="org.eclipse.ui.commands">
+    <command
+        id="io.github.fastsync.edt.commands.uploadSources"
+        name="%upload.command.name"/>
+  </extension>
+  <extension point="org.eclipse.ui.handlers">
+    <handler
+        class="io.github.fastsync.edt.ui.UploadSourcesHandler"
+        commandId="io.github.fastsync.edt.commands.uploadSources"/>
+  </extension>
+  <extension point="org.eclipse.ui.menus">
+    <menuContribution locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#Popup">
+      <command
+          commandId="io.github.fastsync.edt.commands.uploadSources"
+          label="%upload.command.name"
+          style="push">
+        <visibleWhen checkEnabled="false">
+          <with variable="selection">
+            <iterate ifEmpty="false" operator="and">
+              <instanceof value="org.eclipse.core.resources.IProject"/>
+            </iterate>
+          </with>
+        </visibleWhen>
+      </command>
+    </menuContribution>
+  </extension>
+</plugin>

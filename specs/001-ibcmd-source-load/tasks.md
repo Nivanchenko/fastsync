@@ -29,14 +29,14 @@
 
 **Purpose**: восстановить каркас проекта и подготовить регистрацию команды.
 
-- [ ] T001 Восстановить каркас из `main`: `git checkout main -- bom pom.xml targets bundles features repositories tests scripts .github README.md`, сохранив текущие `AGENTS.md` и `specs/`; проверить, что дерево совпадает с plan.md (Tycho 5.0.2, Java 25, каталоги bundle/feature/repository/tests).
-- [ ] T002 [P] Проверить `targets/default/default.target`: EDT `https://edt.1c.ru/downloads/releases/ruby/2026.2/`, Eclipse `releases/2025-12`, Orbit `4.38.0`, ECF `3.15.7`, юнит `com._1c.g5.v8.dt.product.application`; при расхождении — привести к официальному примеру 1С (research R1).
-- [ ] T003 Запустить базовую сборку `./scripts/build.sh` до функциональных изменений; зафиксировать результат (должна быть зелёной), при проблемах окружения — исправить `JAVA_HOME`/Maven.
-- [ ] T004 [P] Обновить `bundles/io.github.fastsync.edt/META-INF/MANIFEST.MF`: добавить `Require-Bundle`/`Import-Package` для `org.eclipse.ui.console`, `org.eclipse.core.jobs`, `com._1c.g5.v8.dt.core`, `com._1c.g5.v8.dt.export`; только публичные пакеты (без `com._1c.g5.v8.dt.internal.*`).
-- [ ] T005 [P] Обновить `bundles/io.github.fastsync.edt/plugin.xml`: убрать диагностическую команду, зарегистрировать `io.github.fastsync.edt.commands.uploadSources` (`org.eclipse.ui.commands`/`handlers`/`menus`, popup Project Explorer, ровно один `IProject`) по contracts/command-contract.md.
-- [ ] T006 [P] Удалить временную диагностику: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/diagnostics/InspectProjectHandler.java` и её ключи из `plugin.properties`/`messages.properties`.
-- [ ] T007 [P] Создать NLS-каркас: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/Messages.java`, `messages.properties` (базовый английский), `messages_ru.properties` (русский) с ключами команды, режимов, стадий, категорий ошибок.
-- [ ] T008 [P] Обновить `tests/io.github.fastsync.edt.tests/META-INF/MANIFEST.MF` и `build.properties`: зависимости `org.junit`, `org.mockito`, пакеты новых тестов, ресурсы stub-скрипта.
+- [x] T001 Собрать каркас по официальному `1C-Company/dt-example-plugins` (master) и адаптировать под `io.github.fastsync.edt` (Tycho 5.0.2, Java 25, каталоги bundle/feature/repository/tests); ветка `main` — вторичный референс для недостающих файлов; текущие `AGENTS.md` и `specs/` не затронуты.
+- [x] T002 [P] Проверить `targets/default/default.target`: EDT `https://edt.1c.ru/downloads/releases/ruby/2026.2/`, Eclipse `releases/2025-12`, Orbit `4.38.0`, ECF `3.15.7`, юнит `com._1c.g5.v8.dt.product.application`; при расхождении — привести к официальному примеру 1С (research R1).
+- [ ] T003 Запустить базовую сборку `./scripts/build.sh` до функциональных изменений. BLOCKED в песочнице: `~/.m2/repository` недоступен для записи, p2-креденшелы отсутствуют; вместо этого выполнены `javac --release 25` против bundle-ов EDT 2026.2.2 и локальный прогон unit-тестов (16/16 OK).
+- [x] T004 [P] Обновить `bundles/io.github.fastsync.edt/META-INF/MANIFEST.MF`: добавить `Require-Bundle`/`Import-Package` для `org.eclipse.ui.console`, `org.eclipse.core.jobs`, `com._1c.g5.v8.dt.core`, `com._1c.g5.v8.dt.export`; только публичные пакеты (без `com._1c.g5.v8.dt.internal.*`).
+- [x] T005 [P] Обновить `bundles/io.github.fastsync.edt/plugin.xml`: убрать диагностическую команду, зарегистрировать `io.github.fastsync.edt.commands.uploadSources` (`org.eclipse.ui.commands`/`handlers`/`menus`, popup Project Explorer, ровно один `IProject`) по contracts/command-contract.md.
+- [x] T006 [P] Удалить временную диагностику: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/diagnostics/InspectProjectHandler.java` и её ключи из `plugin.properties`/`messages.properties`.
+- [x] T007 [P] Создать NLS-каркас: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/Messages.java`, `messages.properties` (базовый английский), `messages_ru.properties` (русский) с ключами команды, режимов, стадий, категорий ошибок.
+- [x] T008 [P] Обновить `tests/io.github.fastsync.edt.tests/META-INF/MANIFEST.MF` и `build.properties`: зависимости `org.junit`, `org.mockito`, пакеты новых тестов, ресурсы stub-скрипта.
 
 **Checkpoint**: каркас собирается, команда зарегистрирована, NLS готов.
 
@@ -48,18 +48,18 @@
 
 **⚠️ CRITICAL**: до завершения этой фазы реализацию user stories не начинать.
 
-- [ ] T009 [P] Создать `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadMode.java` — enum `FULL`, `PARTIAL`.
-- [ ] T010 [P] Создать `upload/UploadTarget.java` — поля и валидационные правила из data-model.md (application, infobase, infobasePath, requiredVersion, installation, thickClient, ibcmd, configVersion, accessSettings).
-- [ ] T011 [P] Создать `upload/UploadReport.java` и `upload/UploadStage.java` — статусы стадий, режим (фактический), коды возврата `ibcmd`, итоговый текст для UI/лога (data-model.md, `UploadReport`).
-- [ ] T012 Реализовать `upload/TargetResolver.java`: `IApplicationManager#getDefaultApplication`, `IInfobaseApplication#getInfobase`, `InfobaseType.FILE` + `FileConnectionString#getFile`, `IApplication#getRequiredVersion`, `IRuntimeInstallationManager#getAllRegistered` + `RuntimeInstallations.filterByVersion`, `IRuntimeComponentManager#resolveExecutor(...THICK_CLIENT)`, путь `ibcmd` рядом с `1cv8` (`bin/ibcmd.exe` на Windows); на любой провал — типизированная ошибка, ИБ не трогается (research R2, R6).
-- [ ] T013 [P] Тесты `tests/io.github.fastsync.edt.tests/src/io/github/fastsync/edt/tests/TargetResolverTest.java` (Mockito): нет приложения; не ИБ; не файловая; нет версии; нет/несколько установок; нет `ibcmd` — все кейсы data-model.md `UploadTarget`.
-- [ ] T014 [P] Создать `upload/IbcmdCommandBuilder.java`: сборка команд полной/частичной загрузки, `config apply`, повтор с `--force`, `config export info --out=<dir>`, общие `--data`/`--temp`/`--db-path`, индексы секретных аргументов (contracts/ibcmd-contract.md).
-- [ ] T015 [P] Тесты `tests/.../IbcmdCommandBuilderTest.java`: порядок аргументов, абсолютные пути, `--partial`/`--base-dir`/список файлов, отсутствие `--session-terminate`, `--force` только в apply-повторе.
-- [ ] T016 [P] Создать `ui/ConsoleOutput.java`: `MessageConsole` «FastSync ibcmd», поток вывода, очистка/показ консоли (contracts/command-contract.md).
-- [ ] T017 Реализовать `upload/IbcmdRunner.java`: `ProcessBuilder`, объединённый stdout+stderr, потоковая передача в `ConsoleOutput`/колбэк, накопление вывода, код возврата, отмена через `IProgressMonitor` (уничтожение процесса), маскирование секретов (contracts/ibcmd-contract.md).
-- [ ] T018 [P] Создать stub-скрипт `tests/io.github.fastsync.edt.tests/resources/ibcmd-stub.sh` (успех, ненулевой код, «предупреждение», длительный процесс) и `tests/.../IbcmdRunnerTest.java`.
-- [ ] T019 Реализовать `upload/UploadJob.java`: Eclipse `Job` с `setUser(true)`, `SubMonitor` по стадиям, Cancel → отмена операции, обновление консоли/итогового отчёта.
-- [ ] T020 Прогнать `./scripts/build.sh`; убедиться, что фундаментальные тесты зелёные.
+- [x] T009 [P] Создать `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadMode.java` — enum `FULL`, `PARTIAL`.
+- [x] T010 [P] Создать `upload/UploadTarget.java` — поля и валидационные правила из data-model.md (application, infobase, infobasePath, requiredVersion, installation, thickClient, ibcmd, configVersion, accessSettings).
+- [x] T011 [P] Создать `upload/UploadReport.java` и `upload/UploadStage.java` — статусы стадий, режим (фактический), коды возврата `ibcmd`, итоговый текст для UI/лога (data-model.md, `UploadReport`).
+- [x] T012 Реализовать `upload/TargetResolver.java`: `IApplicationManager#getDefaultApplication`, `IInfobaseApplication#getInfobase`, `InfobaseType.FILE` + `FileConnectionString#getFile`, `IApplication#getRequiredVersion`, `IRuntimeInstallationManager#getAllRegistered` + `RuntimeInstallations.filterByVersion`, `IRuntimeComponentManager#resolveExecutor(...THICK_CLIENT)`, путь `ibcmd` рядом с `1cv8` (`bin/ibcmd.exe` на Windows); на любой провал — типизированная ошибка, ИБ не трогается (research R2, R6).
+- [x] T013 [P] Тесты `tests/io.github.fastsync.edt.tests/src/io/github/fastsync/edt/tests/TargetResolverTest.java` (Mockito): нет приложения; не ИБ; не файловая; нет версии; нет/несколько установок; нет `ibcmd` — все кейсы data-model.md `UploadTarget`.
+- [x] T014 [P] Создать `upload/IbcmdCommandBuilder.java`: сборка команд полной/частичной загрузки, `config apply`, повтор с `--force`, `config export info --out=<dir>`, общие `--data`/`--temp`/`--db-path`, индексы секретных аргументов (contracts/ibcmd-contract.md).
+- [x] T015 [P] Тесты `tests/.../IbcmdCommandBuilderTest.java`: порядок аргументов, абсолютные пути, `--partial`/`--base-dir`/список файлов, отсутствие `--session-terminate`, `--force` только в apply-повторе.
+- [x] T016 [P] Создать `ui/ConsoleOutput.java`: `MessageConsole` «FastSync ibcmd», поток вывода, очистка/показ консоли (contracts/command-contract.md).
+- [x] T017 Реализовать `upload/IbcmdRunner.java`: `ProcessBuilder`, объединённый stdout+stderr, потоковая передача в `ConsoleOutput`/колбэк, накопление вывода, код возврата, отмена через `IProgressMonitor` (уничтожение процесса), маскирование секретов (contracts/ibcmd-contract.md).
+- [x] T018 [P] Создать stub-скрипт (успех, ненулевой код, «предупреждение», длительный процесс) и `tests/.../IbcmdRunnerTest.java`; stub создаётся тестом во временном каталоге, отдельный ресурс не нужен.
+- [x] T019 Реализовать `upload/UploadJob.java`: Eclipse `Job` с `setUser(true)`, `SubMonitor` по стадиям, Cancel → отмена операции, обновление консоли/итогового отчёта.
+- [ ] T020 Прогнать `./scripts/build.sh`; убедиться, что фундаментальные тесты зелёные. BLOCKED по той же причине, что T003; фундаментальная логика покрыта локальным прогоном тестов.
 
 **Checkpoint**: foundation ready — можно начинать user stories.
 
@@ -78,12 +78,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T023 [US1] Реализовать `upload/SourceExporter.java` (полный экспорт): `IExportPreparationService#waitForExportPreparation`, `IExportOperationFactory`, `IExportStrategy`, `Version` из `IV8Project`; временный каталог `<tmp>/xml`; возвращает `ExportResult` (data-model.md).
-- [ ] T024 [US1] Реализовать `upload/SyncFlowSession.java`: обёртка публичного v2-flow — `IInfobaseSynchronizationStateManager#startUpdateInfobaseFlow(IDtProject, InfobaseReference)`, `start()`, `loadActualConfigDumpInfo(Path)`, `finish()`, `cancel()`; internal-типы не импортируются, ошибки — `RuntimeException` (research R4).
-- [ ] T025 [US1] Реализовать `upload/SyncStateUpdater.java`: `ibcmd config export info --out=<tmp>/dump`, путь `<tmp>/dump/ConfigDumpInfo.xml` → `SyncFlowSession#loadActualConfigDumpInfo`; при неуспехе состояние не обновляется (FR-018/FR-019).
-- [ ] T026 [US1] Реализовать `upload/UploadOperation.java` — state machine `PRECHECK → SAVE → EXPORT → SESSION → IMPORT → APPLY → SYNC_STATE → DONE` для полной загрузки; `finally` — очистка temp и снятие блокировки «одна операция на проект» (data-model.md).
-- [ ] T027 [US1] Реализовать `ui/UploadModeDialog.java` (radio FULL/PARTIAL, сведения о цели) и `ui/UploadSourcesHandler.java` (selection → resolver → dialog → `UploadJob`); регистрация уже в T005.
-- [ ] T028 [US1] Подключить в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadOperation.java` потоковый вывод `ibcmd` в `ui/ConsoleOutput.java` и прогресс по стадиям (через `IbcmdRunner`/`UploadJob`).
+- [x] T023 [US1] Реализовать `upload/SourceExporter.java` (полный экспорт): `IExportPreparationService#waitForExportPreparation`, `IExportOperationFactory`, `IExportStrategy`, `Version` из `IV8Project`; временный каталог `<tmp>/xml`; возвращает `ExportResult` (data-model.md).
+- [x] T024 [US1] Реализовать `upload/SyncFlowSession.java`: обёртка публичного v2-flow — `IInfobaseSynchronizationStateManager#startUpdateInfobaseFlow(IDtProject, InfobaseReference)`, `start()`, `loadActualConfigDumpInfo(Path)`, `finish()`, `cancel()`; internal-типы не импортируются, ошибки — `RuntimeException` (research R4).
+- [x] T025 [US1] Реализовать обновление состояния после импорта: `ibcmd config export info --out=<tmp>/dump`, `<tmp>/dump/ConfigDumpInfo.xml` → `SyncFlowSession#loadActualConfigDumpInfo` (встроено в `UploadOperation`, отдельный класс не понадобился); при неуспехе состояние не обновляется (FR-018/FR-019).
+- [x] T026 [US1] Реализовать `upload/UploadOperation.java` — state machine `PRECHECK → SAVE → EXPORT → SESSION → IMPORT → APPLY → SYNC_STATE → DONE` для полной загрузки; `finally` — очистка temp и снятие блокировки «одна операция на проект» (data-model.md).
+- [x] T027 [US1] Реализовать `ui/UploadModeDialog.java` (radio FULL/PARTIAL, сведения о цели) и `ui/UploadSourcesHandler.java` (selection → resolver → dialog → `UploadJob`); регистрация уже в T005.
+- [x] T028 [US1] Подключить в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadOperation.java` потоковый вывод `ibcmd` в `ui/ConsoleOutput.java` и прогресс по стадиям (через `IbcmdRunner`/`UploadJob`).
 - [ ] T029 [US1] Проверить `./scripts/build.sh` и вручную E2E полной загрузки по [quickstart.md](quickstart.md); проверить, что файлы проекта не изменены, temp удалён.
 
 **Checkpoint**: US1 работает и проверена независимо — MVP готов.
@@ -98,17 +98,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T030 [P] [US2] `tests/.../ChangeSetTest.java` — `removed` непустой → `requiresFullReload`; пустые added+changed → nothing; rename-сценарий (старый URI в removed).
+- [x] T030 [P] [US2] `tests/.../ChangeSetTest.java` — `removed` непустой → `requiresFullReload`; пустые added+changed → nothing; rename-сценарий (старый URI в removed).
 - [ ] T031 [P] [US2] `tests/.../UploadOperationPartialTest.java` — частичная загрузка (файлы/`--partial`), fallback на полную при удалении, отчёт с причиной fallback.
 
 ### Implementation for User Story 2
 
-- [ ] T032 [US2] Создать `upload/ChangeSet.java` (added/changed/removed, `requiresFullReload`, `isEmpty`) по data-model.md.
-- [ ] T033 [US2] Расширить `upload/SyncFlowSession.java`: `collectChanges()` в `beginBackgroundOperation(..., ProjectPipelineJob.IMPORT)` → `flow.collectEdtObjectChanges()` → `ChangeSet` (left/middle/right) + `flow.isFullReloadRequired()` (research R4).
-- [ ] T034 [US2] Расширить `upload/SourceExporter.java`: частичный экспорт только изменённых объектов (added+changed), `IExportStrategy` с subordinates, список созданных XML-файлов для `config import files`.
-- [ ] T035 [US2] Расширить `upload/IbcmdCommandBuilder.java`: `config import files --partial --base-dir=<xmlDir> <relFiles...>` по contracts/ibcmd-contract.md (T014 частично готовит сборку — уточнить сигнатуру).
-- [ ] T036 [US2] Добавить в `upload/UploadOperation.java` ветку PARTIAL: сбор change set, `NOTHING_TO_UPLOAD`, fallback FULL при `requiresFullReload`, передача причины в `UploadReport`/UI.
-- [ ] T037 [US2] Дополнить `tests/.../IbcmdCommandBuilderTest.java` кейсами частичной загрузки (`--partial`, `--base-dir`, список файлов, пустой список не допускается).
+- [x] T032 [US2] Создать `upload/ChangeSet.java` (added/changed/removed, `requiresFullReload`, `isEmpty`) по data-model.md.
+- [x] T033 [US2] Расширить `upload/SyncFlowSession.java`: `collectChanges()` в `beginBackgroundOperation(..., ProjectPipelineJob.IMPORT)` → `flow.collectEdtObjectChanges()` → `ChangeSet` (left/middle/right) + `flow.isFullReloadRequired()` (research R4).
+- [x] T034 [US2] Расширить `upload/SourceExporter.java`: частичный экспорт только изменённых объектов (added+changed), `IExportStrategy` с subordinates, список созданных XML-файлов для `config import files`.
+- [x] T035 [US2] Расширить `upload/IbcmdCommandBuilder.java`: `config import files --partial --base-dir=<xmlDir> <relFiles...>` по contracts/ibcmd-contract.md (T014 частично готовит сборку — уточнить сигнатуру).
+- [x] T036 [US2] Добавить в `upload/UploadOperation.java` ветку PARTIAL: сбор change set, `NOTHING_TO_UPLOAD`, fallback FULL при `requiresFullReload`, передача причины в `UploadReport`/UI.
+- [x] T037 [US2] Дополнить `tests/.../IbcmdCommandBuilderTest.java` кейсами частичной загрузки (`--partial`, `--base-dir`, список файлов, пустой список не допускается).
 - [ ] T038 [US2] `./scripts/build.sh` + ручной E2E: частичная загрузка, удаление/переименование объекта → fallback (quickstart.md).
 
 **Checkpoint**: US1 и US2 работают независимо.
@@ -166,12 +166,12 @@
 
 **Purpose**: документация, локализация, финальная проверка и коммит.
 
-- [ ] T054 [P] Обновить `README.md`: убрать описание временной диагностики, описать команду, требования (EDT 2026.2.2 / Java 25 / Eclipse 2025-12 / Tycho 5.0.2 / Maven 3.9.16), ограничения (только файловая ИБ, без создания ИБ, без завершения сеансов), риск видимости пароля как аргумента процесса.
-- [ ] T055 [P] Ревью локализации: все новые строки только в `messages.properties`/`messages_ru.properties`; паритет ключей ru/en; нет текста в коде.
-- [ ] T056 [P] Проверить отсутствие внутренних пакетов (`com._1c.g5.v8.dt.internal.*`) в импортах bundle и `Require-Bundle`; убрать мёртвый код/остатки диагностики.
+- [x] T054 [P] Обновить `README.md`: убрать описание временной диагностики, описать команду, требования (EDT 2026.2.2 / Java 25 / Eclipse 2025-12 / Tycho 5.0.2 / Maven 3.9.16), ограничения (только файловая ИБ, без создания ИБ, без завершения сеансов), риск видимости пароля как аргумента процесса.
+- [x] T055 [P] Ревью локализации: все новые строки только в `messages.properties`/`messages_ru.properties`; паритет ключей ru/en; нет текста в коде.
+- [x] T056 [P] Проверить отсутствие внутренних пакетов (`com._1c.g5.v8.dt.internal.*`) в импортах bundle и `Require-Bundle`; убрать мёртвый код/остатки диагностики.
 - [ ] T057 Запустить `./scripts/build.sh` (clean verify): все тесты зелёные, без новых предупреждений; исправить регрессии.
 - [ ] T058 Пройти [quickstart.md](quickstart.md) целиком (full, partial, fallback, негативы, сеанс агента, `--force`, отмена) и записать результат проверки.
-- [ ] T059 Закоммитить реализацию в корне репозитория (`git add bundles/io.github.fastsync.edt tests/io.github.fastsync.edt.tests README.md` + `git commit`) с осмысленным сообщением.
+- [x] T059 Закоммитить реализацию в корне репозитория (`git add bundles/io.github.fastsync.edt tests/io.github.fastsync.edt.tests README.md` + `git commit`) с осмысленным сообщением.
 
 ---
 
@@ -254,3 +254,11 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 - Коммит — после логических групп; финальный коммит — T059.
 - Не добавлять зависимости/абстракции вне плана; внутренние пакеты EDT запрещены.
 - Секреты, `--session-terminate=force`, `infobase create` — под запретом на всех этапах.
+
+---
+
+## Progress (2026-11-13)
+
+**Сделано:** каркас сборки (Tycho 5.0.2 / Java 25 / EDT 2026.2 + Eclipse 2025-12), команда и меню, NLS ru/en, модели (`UploadTarget`, `UploadReport`, `ChangeSet`), `TargetResolver` с preflight, `IbcmdCommandBuilder`/`IbcmdRunner` (полная/частичная загрузка, `config apply`, `config export info`, маскирование пароля, отмена), `SourceExporter` (полный/частичный экспорт), `SyncFlowSession` (change set + state sync через публичный v2-flow), `UploadOperation` (state machine), `UploadJob`, диалог режима, консоль, README, тесты (`ChangeSetTest`, `IbcmdCommandBuilderTest`, `IbcmdRunnerTest`, `TargetResolverTest`) — 16/16 проходят локально, bundle компилируется `javac --release 25` против EDT 2026.2.2.
+
+**Осталось:** `--force`-подтверждение и US4-наблюдаемость, `DesignerSessionGuard` (US3), отдельные тесты `SourceExporterTest`/`UploadOperationFullTest`/`UploadOperationPartialTest`, `./scripts/build.sh` и ручной E2E (T003/T020/T057/T058 недоступны в песочнице: `~/.m2` read-only, нет p2-креденшелов).

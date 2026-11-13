@@ -4,11 +4,12 @@
 
 Все решения проверены по установленной целевой среде: 1C:EDT 2026.2.2 (buildId 2026.2.2.21), платформенные bundle-ы `com._1c.g5.v8.dt.*` 2026.2.2 из `~/.p2/pool`, Java 25 (bundle-ы EDT объявляют `Bundle-RequiredExecutionEnvironment: JavaSE-25`, class-file major 69), Eclipse 2025-12 / SimRel 2025-12, `ibcmd` платформы 8.3.27.2342.
 
-## R1. Базовая сборка: восстановить каркас из `main` и обновить версии
+## R1. Базовая сборка: официальный пример 1С как источник каркаса
 
-- **Decision**: в текущей ветке кода нет (удалён коммитом `new`). Каркас сборки берётся из ветки `main` (последние коммиты уже переведены на 2026.2.2/Java 25/Eclipse 2025-12): Tycho 5.0.2, `maven.compiler.release=25`, EE `JavaSE-25`, target из официального примера 1С для EDT 2026.2.
-- **Rationale**: готовый, уже обновлённый под новую цель каркас; официальный target 2026.2 проверяем по `https://github.com/1C-Company/dt-example-plugins/blob/master/targets/default/default.target` (EDT `ruby/2026.2`, Eclipse `releases/2025-12`, Orbit 4.38.0, ECF 3.15.7).
-- **Alternatives**: пересоздать каркас с нуля — лишняя работа без выгоды.
+- **Decision**: каркас собран заново по официальному репозиторию `1C-Company/dt-example-plugins` (master, скачан 2026-11-13) и адаптирован под `io.github.fastsync.edt`: Tycho 5.0.2, `maven.compiler.release=25`, EE `JavaSE-25`, Maven prerequisites 3.9.9, target — официальный `targets/default/default.target` (EDT `ruby/2026.2`, Eclipse `releases/2025-12`, Orbit 4.38.0, ECF 3.15.7, юнит `com._1c.g5.v8.dt.product.application`). Ветка `main` содержит производный от того же примера каркас и используется как вторичный референс/для восстановления недостающих файлов.
+- **Rationale**: master — актуальный источник сборки для EDT 2026.2: его `bom/pom.xml` уже содержит Tycho 5.0.2, Java 25 и `java.profile=JavaSE-25`, target совпадает с официальным. Адаптация namespace/структуры минимальна (один bundle вместо двух примеров, PDE-тесты вместо itests).
+- **Alternatives**: пересоздать без оглядки на пример — риск расхождения с целевой платформой; копировать `main` целиком — в нём каркас старой ревизии примера.
+- **Проверка**: версии и target сверены с master; `javac --release 25` против bundle-ов EDT 2026.2.2 проходит, unit-тесты проходят (см. отчёт реализации).
 
 ## R2. Целевое приложение, ИБ и версия платформы
 

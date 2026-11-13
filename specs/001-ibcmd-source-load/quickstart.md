@@ -5,7 +5,7 @@
 ## Предварительные условия
 
 - macOS (или Windows/Linux) с 1C:EDT **2026.2.2** (buildId 2026.2.2.21).
-- Eclipse IDE для разработки плагинов **1C_EDT 2025-12** (Eclipse 2025-12).
+- Eclipse IDE для разработки плагинов **1C_EDT 2025-12** (Eclipse 2025-12): `/Users/nikita.ivanchenko/Library/Application Support/1C/1cedtstart/installations/Eclipse для разработки плагинов 1C_EDT 2025-12/eclipse.app`.
 - JDK **25** (Axiom JDK из состава 1C или Zulu 25) и Maven 3.9.16.
 - Установленная платформа 1С:Предприятие **8.3.27** с `ibcmd` (например, `/opt/1cv8/8.3.27.2342`).
 - Существующая **файловая** ИБ (создаётся вне плагина) и проект EDT, привязанный к ней приложением.

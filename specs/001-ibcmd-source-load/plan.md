@@ -68,7 +68,7 @@ specs/001-ibcmd-source-load/
 
 ### Source Code (repository root)
 
-В рабочей ветке кода нет — первым шагом восстанавливается каркас из `main` (уже на 2026.2.2/Java 25/Eclipse 2025-12) и дополняется новыми классами.
+В рабочей ветке кода нет — каркас собирается по официальному `1C-Company/dt-example-plugins` (master: Tycho 5.0.2, Java 25, Eclipse 2025-12, target `ruby/2026.2`) и адаптируется под `io.github.fastsync.edt`; каркас из `main` — вторичный референс. Ручная проверка — из Eclipse IDE для разработки плагинов 1C_EDT 2025-12: `/Users/nikita.ivanchenko/Library/Application Support/1C/1cedtstart/installations/Eclipse для разработки плагинов 1C_EDT 2025-12/eclipse.app`.
 
 ```text
 pom.xml                         # корневой Tycho-проект
