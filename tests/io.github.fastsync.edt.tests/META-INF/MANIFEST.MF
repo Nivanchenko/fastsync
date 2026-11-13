@@ -10,6 +10,7 @@ Require-Bundle: org.junit;bundle-version="[4.13.0,5.0.0)",
  org.eclipse.core.resources,
  org.eclipse.emf.ecore,
  com._1c.g5.v8.dt.core,
+ com._1c.g5.v8.dt.export,
  com._1c.g5.v8.dt.platform.services.core,
  com._1c.g5.v8.dt.platform.services.model,
  com.e1c.g5.dt.applications,
@@ -17,6 +18,7 @@ Require-Bundle: org.junit;bundle-version="[4.13.0,5.0.0)",
  io.github.fastsync.edt;bundle-version="[0.1.0,1.0.0)"
 Import-Package: org.osgi.framework,
  com._1c.g5.v8.dt.platform.version,
+ com._1c.g5.v8.dt.metadata.mdclass,
  org.mockito,
  org.mockito.stubbing
 Bundle-RequiredExecutionEnvironment: JavaSE-25

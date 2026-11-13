@@ -68,6 +68,15 @@ public final class DesignerSessionGuard implements AutoCloseable
         this.infobase = target.infobase();
     }
 
+    /** Visible for tests: uses already resolved launcher/component/infobase. */
+    public DesignerSessionGuard(IDesignerSessionThickClientLauncher launcher,
+        ILaunchableRuntimeComponent component, InfobaseReference infobase)
+    {
+        this.launcher = launcher;
+        this.component = component;
+        this.infobase = infobase;
+    }
+
     /** Closes the connection if it was open; aborts the operation when this is not safe. */
     public void closeSession() throws UploadException
     {
