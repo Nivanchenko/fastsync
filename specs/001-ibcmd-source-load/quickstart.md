@@ -80,6 +80,12 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 
 Альтернатива — перевести target/запуск на `aarch64` (потребуются `org.eclipse.swt.cocoa.macosx.aarch64` и arm64 JDK); для текущей x86_64-сборки EDT это не требуется.
 
+
+### Безвредные предупреждения Java 25 при запуске тестовой EDT
+
+В логе Run As → Eclipse Application на Java 25 нормальны и не связаны с FastSync:
+`Using incubator modules: jdk.incubator.vector`, `restricted method Runtime.load`, `SLF4J: Failed to load StaticLoggerBinder`, `Annotation classes from 'javax.inject'/'javax.annotation'`, `sun.misc.Unsafe::staticFieldBase` (Guice), `NLS unused message` (внутренние bundle-ы Eclipse/EDT), `CoreSVG has logged an error`, а также запись `1C:EDT закрывается` при закрытии приложения. Подавить часть из них можно VM-аргументами запуска: `--enable-native-access=ALL-UNNAMED`, `-Declipse.e4.inject.javax.warning=false`.
+
 ## Ожидаемые артефакты после реализации
 
 - `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/**` — команда, диалог, orchestrator, resolver, exporter, session guard, ibcmd runner, sync updater, report, messages.
