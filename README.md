@@ -54,7 +54,7 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 2. Откройте `targets/default/default.target` в Target Editor, авторизуйтесь учётной записью с доступом к p2-репозиторию 1С и выберите **Set as Active Target Platform**. Не сохраняйте учётные данные в репозитории.
 3. Запустите **Run As → Eclipse Application** для проекта `io.github.fastsync.edt`.
 
-> В **Run Configurations → Arguments → VM arguments** добавьте аргументы EDT для Java 25 (см. [quickstart.md](specs/001-ibcmd-source-load/quickstart.md), раздел про VM-аргументы). Без `--add-opens=java.base/java.nio=ALL-UNNAMED` 1C BM/Ignite не запускается и создание/импорт проекта падает.
+> Запускайте готовым `bundles/io.github.fastsync.edt/plugin.launch` (ПКМ → Run As → Eclipse Application): он задаёт EDT-продукт `com._1c.g5.v8.dt.product.application.rcp`, x86_64 JDK 25 и обязательные `--add-opens` для Java 25. С `org.eclipse.platform.ide` 1C-сервисы не поднимаются (зависание, `Service wait timed out`), а без `--add-opens=java.base/java.nio=ALL-UNNAMED` падает 1C BM/Ignite.
 
 > Если при запуске возникает `UnsatisfiedLinkError` про SWT (`have 'x86_64', need 'arm64'`): IDE и target-платформа — x86_64, а launch configuration взяла arm64 JDK. Добавьте в **Preferences → Java → Installed JREs** x86_64 JDK 25 (`/Applications/1C/1CE/components/axiom-jdk-full-25.0.2+12-x86_64`) и выберите его в **Run Configurations → JRE → Alternate JRE**.
 

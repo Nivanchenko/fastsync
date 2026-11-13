@@ -87,32 +87,16 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 `Using incubator modules: jdk.incubator.vector`, `restricted method Runtime.load`, `SLF4J: Failed to load StaticLoggerBinder`, `Annotation classes from 'javax.inject'/'javax.annotation'`, `sun.misc.Unsafe::staticFieldBase` (Guice), `NLS unused message` (внутренние bundle-ы Eclipse/EDT), `CoreSVG has logged an error`, а также запись `1C:EDT закрывается` при закрытии приложения. Подавить часть из них можно VM-аргументами запуска: `--enable-native-access=ALL-UNNAMED`, `-Declipse.e4.inject.javax.warning=false`.
 
 
-### Обязательные VM-аргументы для PDE-запуска EDT (Java 25)
+### PDE-запуск EDT: обязательны продукт EDT и VM-аргументы
 
-Без них 1C BM/Ignite не инициализируется (`InaccessibleObjectException: module java.base does not "opens java.nio"`), создание/импорт проекта падает, дерево метаданных показывается как структура каталогов.
+Тестовая EDT должна запускаться **продуктом 1С**, а не `org.eclipse.platform.ide`: иначе 1C-сервисы не поднимаются — в логе `Service wait timed out`, `NullPointerException` в `EObjectProviderRegistry`, интерфейс зависает, проекты не создаются.
 
-**Run → Run Configurations… → Eclipse Application → Arguments → VM arguments** — добавить:
+Готовый launch лежит в репозитории: `bundles/io.github.fastsync.edt/plugin.launch` (ПКМ → Run As → Eclipse Application). Он задаёт:
+- `product = com._1c.g5.v8.dt.product.application.rcp`;
+- JRE **JavaSE-25** — должно резолвиться в x86_64 JDK 25 (см. диагностику SWT выше);
+- полный набор `--add-opens`/`--add-modules` и `-D`-аргументов из `1cedt.ini` EDT 2026.2.
 
-```text
--Dosgi.requiredJavaVersion=25
---add-modules=ALL-SYSTEM
---add-opens=java.base/java.lang.constant=ALL-UNNAMED
---add-opens=java.base/java.lang=ALL-UNNAMED
---add-opens=java.base/java.lang.ref=ALL-UNNAMED
---add-opens=java.base/java.nio=ALL-UNNAMED
---add-opens=java.base/java.time=ALL-UNNAMED
---add-opens=java.base/sun.nio.ch=ALL-UNNAMED
---add-opens=java.base/java.net=ALL-UNNAMED
--Dorg.osgi.framework.bundle.parent=ext
--Dosgi.module.lock.timeout=240
--De1c.wiring.managedInitialization=true
--DmigrationEnabled=true
--Dlog4j.configuration=platform:/plugin/com._1c.g5.v8.dt.logging/log4j.properties
--Dlog4j.formatMsgNoLookups=true
--Dlog4j2.formatMsgNoLookups=true
-```
-
-Критичен `--add-opens=java.base/java.nio=ALL-UNNAMED`; остальные нужны остальным компонентам EDT. После падения первого запуска удалите из runtime-workspace частично созданный проект (`/Конфигурация`) с содержимым на диске и повторите.
+Если используется своя launch-конфигурация: на вкладке **Main** выберите **Run a product** → `com._1c.g5.v8.dt.product.application.rcp`, а VM arguments возьмите из `plugin.launch`. После смены продукта удалите старый runtime-workspace (`../runtime-New_configuration`) и создайте проект заново.
 
 ## Ожидаемые артефакты после реализации
 
