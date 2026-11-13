@@ -75,6 +75,18 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 - `ibcmd` принимает пароль как аргумент процесса — при наличии учётных данных пароль может быть кратковременно виден другим процессам того же пользователя; плагин маскирует его в выводе и не сохраняет;
 - расширения конфигурации не поддерживаются в v1.
 
+
+## Проверка в установленной EDT (рекомендуется вместо PDE)
+
+Self-hosted PDE-запуск EDT на Java 25 нестабилен (`PlatformPlugin.getRuntimeRegistry() is null`, таймауты сервисов). Для проверки пользовательского сценария ставьте собранный плагин в **1C:EDT 2026.2.2**:
+
+1. Соберите p2-репозиторий: `./scripts/build.sh` → `repositories/io.github.fastsync.edt.repository/target/repository/`.
+2. В EDT: **Help → Install New Software… → Add… → Local…** → укажите каталог `repositories/io.github.fastsync.edt.repository/target/repository`.
+3. Выберите **FastSync for 1C:EDT** → Next → примите условия → Restart.
+4. Откройте проект с файловой ИБ и выполните ПКМ → **Upload Sources to Infobase via ibcmd**.
+
+Плагин собран под EDT 2026.2.2 / Java 25; в более старые EDT (2025.x) он не установится по BREE. Для итераций после изменения кода: пересобрать p2 и повторить установку/обновление (**Help → Installation Details → Update**).
+
 ## Структура
 
 ```text
