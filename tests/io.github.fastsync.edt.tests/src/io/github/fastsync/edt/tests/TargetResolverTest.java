@@ -138,6 +138,15 @@ public class TargetResolverTest
     }
 
     @Test
+    public void resolvesExplicitlySelectedApplication() throws Exception
+    {
+        UploadTarget target = resolver().resolve(project, application, new NullProgressMonitor());
+
+        assertEquals(application, target.application());
+        assertEquals(infobaseDirectory, target.infobasePath());
+    }
+
+    @Test
     public void failsWithoutDefaultApplication() throws Exception
     {
         when(applicationManager.getDefaultApplication(project)).thenReturn(Optional.empty());

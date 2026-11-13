@@ -75,7 +75,6 @@ public final class TargetResolver
     public UploadTarget resolve(IProject project, IProgressMonitor monitor) throws UploadException
     {
         Objects.requireNonNull(project, "project"); //$NON-NLS-1$
-
         IApplication application;
         try
         {
@@ -87,6 +86,15 @@ public final class TargetResolver
         {
             throw new UploadException(e, "error.no.application"); //$NON-NLS-1$
         }
+        return resolve(project, application, monitor);
+    }
+
+    /** Resolves the target for the explicitly selected application. */
+    public UploadTarget resolve(IProject project, IApplication application, IProgressMonitor monitor)
+        throws UploadException
+    {
+        Objects.requireNonNull(project, "project"); //$NON-NLS-1$
+        Objects.requireNonNull(application, "application"); //$NON-NLS-1$
 
         if (!(application instanceof IInfobaseApplication infobaseApplication))
         {

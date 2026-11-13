@@ -268,3 +268,9 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 **E2E (установленная EDT 2026.2.2 + файловая ИБ 8.3.27.2342):** полная и частичная загрузки прошли успешно; `config apply` с подтверждением структуры (`--force` по настройке ИБ) и обновление состояния синхронизации работают.
 
 **Осталось:** тесты `UploadOperationFullTest`/`UploadOperationPartialTest`; E2E fallback при удалении/переименовании, отмена, восстановление сеанса агента (T044/T053/T058).
+
+---
+
+## Phase 8: Application-scoped command (follow-up)
+
+- [x] T060 [US1] Добавить команду в контекстное меню приложения (`IApplication`): `UploadSourcesHandler` принимает выделенное приложение, `TargetResolver#resolve(IProject, IApplication, IMonitor)` обновляет именно его ИБ; в диалоге показывается имя приложения. Команда из проекта по-прежнему использует приложение по умолчанию. Проверено сборкой и unit-тестом `TargetResolverTest#resolvesExplicitlySelectedApplication`.

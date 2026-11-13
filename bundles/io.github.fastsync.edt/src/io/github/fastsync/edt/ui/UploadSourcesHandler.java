@@ -13,6 +13,8 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import io.github.fastsync.edt.Messages;
+import com.e1c.g5.dt.applications.IApplication;
+
 import io.github.fastsync.edt.upload.TargetResolver;
 import io.github.fastsync.edt.upload.UploadException;
 import io.github.fastsync.edt.upload.UploadMode;
@@ -28,7 +30,18 @@ public final class UploadSourcesHandler extends AbstractHandler
         Shell shell = HandlerUtil.getActiveShell(event);
         IStructuredSelection selection = HandlerUtil.getCurrentStructuredSelection(event);
         Object first = selection == null ? null : selection.getFirstElement();
-        if (!(first instanceof IProject project))
+        IProject project = null;
+        IApplication selectedApplication = null;
+        if (first instanceof IApplication application)
+        {
+            selectedApplication = application;
+            project = application.getProject();
+        }
+        else if (first instanceof IProject selectedProject)
+        {
+            project = selectedProject;
+        }
+        if (project == null)
         {
             MessageDialog.openError(shell, Messages.get("dialog.title"), Messages.get("error.project")); //$NON-NLS-1$ //$NON-NLS-2$
             return null;
@@ -43,7 +56,10 @@ public final class UploadSourcesHandler extends AbstractHandler
         UploadTarget target;
         try
         {
-            target = new TargetResolver().resolve(project, new NullProgressMonitor());
+            TargetResolver resolver = new TargetResolver();
+            target = selectedApplication == null
+                ? resolver.resolve(project, new NullProgressMonitor())
+                : resolver.resolve(project, selectedApplication, new NullProgressMonitor());
         }
         catch (UploadException e)
         {

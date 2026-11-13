@@ -15,7 +15,8 @@ public final class UploadModeDialog
     public Optional<UploadMode> open(Shell shell, UploadTarget target)
     {
         String message = Messages.get("dialog.mode.message", //$NON-NLS-1$
-            target.project().getName(), target.infobasePath(), target.requiredVersion(), target.ibcmd());
+            target.application().getName(), target.project().getName(), target.infobasePath(),
+            target.requiredVersion(), target.ibcmd());
         int choice = MessageDialog.open(MessageDialog.QUESTION, shell, Messages.get("dialog.title"), message, //$NON-NLS-1$
             0, Messages.get("dialog.mode.full"), Messages.get("dialog.mode.partial")); //$NON-NLS-1$ //$NON-NLS-2$
         if (choice == 0)

@@ -12,6 +12,20 @@
         commandId="io.github.fastsync.edt.commands.uploadSources"/>
   </extension>
   <extension point="org.eclipse.ui.menus">
+    <menuContribution locationURI="popup:org.eclipse.ui.popup.any?objectClass=com.e1c.g5.dt.applications.IApplication">
+      <command
+          commandId="io.github.fastsync.edt.commands.uploadSources"
+          label="%upload.command.name"
+          style="push">
+        <visibleWhen checkEnabled="false">
+          <with variable="selection">
+            <iterate ifEmpty="false" operator="and">
+              <instanceof value="com.e1c.g5.dt.applications.IApplication"/>
+            </iterate>
+          </with>
+        </visibleWhen>
+      </command>
+    </menuContribution>
     <menuContribution locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup">
       <command
           commandId="io.github.fastsync.edt.commands.uploadSources"
