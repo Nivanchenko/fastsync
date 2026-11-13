@@ -124,7 +124,7 @@ public final class UploadOperation
                 monitor, listener);
             if (importResult.exitCode() != 0)
             {
-                throw new UploadException("error.import", importResult.exitCode()); //$NON-NLS-1$
+                throw new UploadException("error.import", importResult.exitCode(), tail(importResult.output())); //$NON-NLS-1$
             }
 
             report.setStage(UploadStage.APPLY);
@@ -190,9 +190,10 @@ public final class UploadOperation
         {
             throw new UploadException("error.sessionsBlocked"); //$NON-NLS-1$
         }
-        if (!WarningsParser.requiresConfirmation(output))
+        // Code 102 is returned when the apply needs an explicit confirmation as well.
+        if (!WarningsParser.requiresConfirmation(output) && result.exitCode() != 102)
         {
-            throw new UploadException("error.apply", result.exitCode()); //$NON-NLS-1$
+            throw new UploadException("error.apply", result.exitCode(), tail(output)); //$NON-NLS-1$
         }
         if (asksForConfirmation())
         {
@@ -218,7 +219,7 @@ public final class UploadOperation
         }
         if (forced.exitCode() != 0)
         {
-            throw new UploadException("error.apply", forced.exitCode()); //$NON-NLS-1$
+            throw new UploadException("error.apply", forced.exitCode(), tail(forced.output())); //$NON-NLS-1$
         }
     }
 
@@ -234,6 +235,17 @@ public final class UploadOperation
             throw new UploadCancelledException();
         }
         return result;
+    }
+
+    private static String tail(String output)
+    {
+        if (output == null)
+        {
+            return ""; //$NON-NLS-1$
+        }
+        String trimmed = output.strip();
+        int max = 1200;
+        return trimmed.length() <= max ? trimmed : trimmed.substring(trimmed.length() - max);
     }
 
     private boolean asksForConfirmation()
