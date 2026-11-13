@@ -24,6 +24,13 @@ public final class IbcmdRunner
 
     public Result run(IbcmdInvocation invocation, IProgressMonitor monitor, Listener listener) throws UploadException
     {
+        return run(invocation, monitor, listener, null);
+    }
+
+    /** Runs the command, optionally answering an interactive prompt after user confirmation. */
+    public Result run(IbcmdInvocation invocation, IProgressMonitor monitor, Listener listener, String stdin)
+        throws UploadException
+    {
         ProcessBuilder builder = new ProcessBuilder(invocation.arguments());
         builder.redirectErrorStream(true);
         Process process;
@@ -34,6 +41,19 @@ public final class IbcmdRunner
         catch (IOException e)
         {
             throw new UploadException(e, "error.ibcmd.start", e.getMessage()); //$NON-NLS-1$
+        }
+
+        if (stdin != null)
+        {
+            try (java.io.OutputStream input = process.getOutputStream())
+            {
+                input.write(stdin.getBytes(StandardCharsets.UTF_8));
+                input.flush();
+            }
+            catch (IOException e)
+            {
+                throw new UploadException(e, "error.ibcmd.start", e.getMessage()); //$NON-NLS-1$
+            }
         }
 
         StringBuilder output = new StringBuilder();

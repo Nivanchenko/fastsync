@@ -196,7 +196,16 @@ public final class UploadOperation
         {
             throw new UploadException("report.importedNotApplied"); //$NON-NLS-1$
         }
-        IbcmdRunner.Result forced = runCommand(runner, builder.apply(true), monitor, listener);
+        listener.outputLine(Messages.get("console.confirmed")); //$NON-NLS-1$
+        IbcmdInvocation forcedApply = builder.apply(true);
+        listener.outputLine(Messages.get("console.command", forcedApply.display())); //$NON-NLS-1$
+        IbcmdRunner.Result forced = runner.run(forcedApply, monitor, listener, "y\n"); //$NON-NLS-1$
+        listener.outputLine(Messages.get("console.exit", forced.exitCode())); //$NON-NLS-1$
+        report.command(forcedApply.display(), forced.exitCode());
+        if (forced.cancelled())
+        {
+            throw new UploadCancelledException();
+        }
         if (forced.exitCode() != 0)
         {
             throw new UploadException("error.apply", forced.exitCode()); //$NON-NLS-1$

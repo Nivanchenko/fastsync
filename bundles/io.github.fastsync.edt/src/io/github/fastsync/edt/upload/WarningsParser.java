@@ -16,7 +16,10 @@ public final class WarningsParser
         return lower.contains("предупрежд") //$NON-NLS-1$
             || lower.contains("warning") //$NON-NLS-1$
             || lower.contains("требует подтверждения") //$NON-NLS-1$
-            || lower.contains("requires confirmation"); //$NON-NLS-1$
+            || lower.contains("requires confirmation") //$NON-NLS-1$
+            || lower.contains("[y/n]") //$NON-NLS-1$
+            || lower.contains("принять изменения") //$NON-NLS-1$
+            || lower.contains("продолжить обновление"); //$NON-NLS-1$
     }
 
     /**

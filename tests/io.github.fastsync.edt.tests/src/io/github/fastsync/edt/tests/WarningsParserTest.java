@@ -14,6 +14,7 @@ public class WarningsParserTest
     {
         assertTrue(WarningsParser.requiresConfirmation("Обнаружены предупреждения"));
         assertTrue(WarningsParser.requiresConfirmation("WARNING: structure changes"));
+        assertTrue(WarningsParser.requiresConfirmation("Принять изменения и продолжить обновление [y/n] :"));
         assertFalse(WarningsParser.requiresConfirmation("Произошла ошибка"));
     }
 
