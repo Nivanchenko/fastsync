@@ -20,9 +20,13 @@ import com._1c.g5.v8.dt.core.platform.IDtProjectManager;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.platform.services.core.infobases.IInfobaseAccessManager;
+import com._1c.g5.v8.dt.platform.services.core.infobases.InfobaseAccessType;
 import com._1c.g5.v8.dt.platform.services.core.infobases.IInfobaseAccessSettings;
 import com._1c.g5.v8.dt.platform.services.core.runtimes.IRuntimeInstallationManager;
 import com._1c.g5.v8.dt.platform.services.core.runtimes.RuntimeInstallations;
+import com._1c.g5.v8.dt.platform.services.core.runtimes.environments.IResolvableRuntimeInstallation;
+import com._1c.g5.v8.dt.platform.services.core.runtimes.environments.IResolvableRuntimeInstallationManager;
+import com._1c.g5.v8.dt.platform.services.core.runtimes.environments.MatchingRuntimeNotFound;
 import com._1c.g5.v8.dt.platform.services.core.runtimes.execution.ComponentExecutorInfo;
 import com._1c.g5.v8.dt.platform.services.core.runtimes.execution.IDesignerSessionThickClientLauncher;
 import com._1c.g5.v8.dt.platform.services.core.runtimes.execution.ILaunchableRuntimeComponent;
@@ -127,37 +131,50 @@ public final class TargetResolver
             throw new UploadException("error.service", "IRuntimeInstallationManager"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
-        // The application version is optional; fall back to the infobase/project version.
-        List<String> candidateVersions = new ArrayList<>();
-        application.getRequiredVersion().filter(version -> !version.isBlank()).ifPresent(candidateVersions::add);
-        addVersion(candidateVersions, infobase.getVersion());
-        addVersion(candidateVersions, infobase.getDefaultVersion());
-        addVersion(candidateVersions, v8Project.getVersion().toString());
+        // Let EDT pick the installation it uses for this project/infobase when possible.
+        RuntimeInstallation installation = selectedInstallation(project, infobase, installations);
+        String requiredVersion;
+        if (installation != null)
+        {
+            requiredVersion = installation.getVersionWithBuild();
+        }
+        else
+        {
+            // The application version is optional; fall back to the infobase/project version.
+            List<String> candidateVersions = new ArrayList<>();
+            application.getRequiredVersion().filter(version -> !version.isBlank()).ifPresent(candidateVersions::add);
+            addVersion(candidateVersions, infobase.getVersion());
+            addVersion(candidateVersions, infobase.getDefaultVersion());
+            addVersion(candidateVersions, v8Project.getVersion().toString());
 
-        List<RuntimeInstallation> matches = List.of();
-        String requiredVersion = candidateVersions.isEmpty() ? "" : candidateVersions.get(0); //$NON-NLS-1$
-        for (String candidate : candidateVersions)
-        {
-            try
+            List<RuntimeInstallation> matches = List.of();
+            requiredVersion = candidateVersions.isEmpty() ? "" : candidateVersions.get(0); //$NON-NLS-1$
+            for (String candidate : candidateVersions)
             {
-                matches = installations.stream().filter(RuntimeInstallations.filterByVersion(candidate)).toList();
+                try
+                {
+                    matches = installations.stream().filter(RuntimeInstallations.filterByVersion(candidate))
+                        .toList();
+                }
+                catch (RuntimeException e)
+                {
+                    matches = List.of();
+                }
+                if (!matches.isEmpty())
+                {
+                    // Several patch builds of the same line may be installed; use the newest one.
+                    installation = matches.stream().max(RuntimeInstallations.orderByVersion())
+                        .orElse(matches.get(0));
+                    requiredVersion = installation.getVersionWithBuild();
+                    break;
+                }
             }
-            catch (RuntimeException e)
+            if (installation == null)
             {
-                matches = List.of();
-            }
-            if (matches.size() == 1)
-            {
-                requiredVersion = candidate;
-                break;
+                throw new UploadException("error.no.installation", //$NON-NLS-1$
+                    String.join(", ", candidateVersions)); //$NON-NLS-1$
             }
         }
-        if (matches.size() != 1)
-        {
-            throw new UploadException("error.no.installation", //$NON-NLS-1$
-                String.join(", ", candidateVersions)); //$NON-NLS-1$
-        }
-        RuntimeInstallation installation = matches.get(0);
 
         ComponentExecutorInfo<ILaunchableRuntimeComponent, IDesignerSessionThickClientLauncher> componentAndExecutor;
         try
@@ -238,6 +255,33 @@ public final class TargetResolver
         {
             return null;
         }
+    }
+
+    private RuntimeInstallation selectedInstallation(IProject project, InfobaseReference infobase,
+        List<RuntimeInstallation> installations)
+    {
+        IResolvableRuntimeInstallationManager manager =
+            Services.get(IResolvableRuntimeInstallationManager.class);
+        if (manager == null)
+        {
+            return null;
+        }
+        try
+        {
+            IResolvableRuntimeInstallation resolvable = manager.resolveByProjectAndInfobase(
+                RuntimeInstallations.ENTERPRISE_PLATFORM, project, infobase, InfobaseAccessType.UPDATE);
+            RuntimeInstallation resolved = resolvable.resolve(List.<String>of(), null);
+            if (resolved != null && installations.stream()
+                .anyMatch(candidate -> RuntimeInstallations.equals(candidate, resolved)))
+            {
+                return resolved;
+            }
+        }
+        catch (RuntimeException e)
+        {
+            // Fall back to the version-based lookup below.
+        }
+        return null;
     }
 
     private static void addVersion(List<String> versions, String version)
