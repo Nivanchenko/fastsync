@@ -1,0 +1,256 @@
+# Tasks: загрузка исходников проекта EDT в файловую ИБ через ibcmd
+
+**Input**: Design documents from `/specs/001-ibcmd-source-load/`
+
+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
+
+**Tests**: включены принудительно — `AGENTS.md` требует тест для добавленного поведения; в спеке тесты не отменялись.
+
+**Organization**: задачи сгруппированы по user stories из spec.md; MVP — US1.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: можно выполнять параллельно (разные файлы, нет зависимостей)
+- **[Story]**: US1…US4 — принадлежность user story
+- Везде указаны точные пути файлов
+
+## Path Conventions
+
+Рабочая ветка `vendor/example`, Eclipse/Tycho multi-module (см. plan.md):
+
+- bundle: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/`
+- PDE tests: `tests/io.github.fastsync.edt.tests/src/io/github/fastsync/edt/tests/`
+- test resources: `tests/io.github.fastsync.edt.tests/resources/`
+- конфиги сборки: `pom.xml`, `bom/pom.xml`, `targets/`, `bundles/io.github.fastsync.edt/META-INF/MANIFEST.MF`, `bundles/io.github.fastsync.edt/plugin.xml`
+
+---
+
+## Phase 1: Setup (Shared Infrastructure)
+
+**Purpose**: восстановить каркас проекта и подготовить регистрацию команды.
+
+- [ ] T001 Восстановить каркас из `main`: `git checkout main -- bom pom.xml targets bundles features repositories tests scripts .github README.md`, сохранив текущие `AGENTS.md` и `specs/`; проверить, что дерево совпадает с plan.md (Tycho 5.0.2, Java 25, каталоги bundle/feature/repository/tests).
+- [ ] T002 [P] Проверить `targets/default/default.target`: EDT `https://edt.1c.ru/downloads/releases/ruby/2026.2/`, Eclipse `releases/2025-12`, Orbit `4.38.0`, ECF `3.15.7`, юнит `com._1c.g5.v8.dt.product.application`; при расхождении — привести к официальному примеру 1С (research R1).
+- [ ] T003 Запустить базовую сборку `./scripts/build.sh` до функциональных изменений; зафиксировать результат (должна быть зелёной), при проблемах окружения — исправить `JAVA_HOME`/Maven.
+- [ ] T004 [P] Обновить `bundles/io.github.fastsync.edt/META-INF/MANIFEST.MF`: добавить `Require-Bundle`/`Import-Package` для `org.eclipse.ui.console`, `org.eclipse.core.jobs`, `com._1c.g5.v8.dt.core`, `com._1c.g5.v8.dt.export`; только публичные пакеты (без `com._1c.g5.v8.dt.internal.*`).
+- [ ] T005 [P] Обновить `bundles/io.github.fastsync.edt/plugin.xml`: убрать диагностическую команду, зарегистрировать `io.github.fastsync.edt.commands.uploadSources` (`org.eclipse.ui.commands`/`handlers`/`menus`, popup Project Explorer, ровно один `IProject`) по contracts/command-contract.md.
+- [ ] T006 [P] Удалить временную диагностику: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/diagnostics/InspectProjectHandler.java` и её ключи из `plugin.properties`/`messages.properties`.
+- [ ] T007 [P] Создать NLS-каркас: `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/Messages.java`, `messages.properties` (базовый английский), `messages_ru.properties` (русский) с ключами команды, режимов, стадий, категорий ошибок.
+- [ ] T008 [P] Обновить `tests/io.github.fastsync.edt.tests/META-INF/MANIFEST.MF` и `build.properties`: зависимости `org.junit`, `org.mockito`, пакеты новых тестов, ресурсы stub-скрипта.
+
+**Checkpoint**: каркас собирается, команда зарегистрирована, NLS готов.
+
+---
+
+## Phase 2: Foundational (Blocking Prerequisites)
+
+**Purpose**: общие сущности и инфраструктура, без которых не начнётся ни одна user story.
+
+**⚠️ CRITICAL**: до завершения этой фазы реализацию user stories не начинать.
+
+- [ ] T009 [P] Создать `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadMode.java` — enum `FULL`, `PARTIAL`.
+- [ ] T010 [P] Создать `upload/UploadTarget.java` — поля и валидационные правила из data-model.md (application, infobase, infobasePath, requiredVersion, installation, thickClient, ibcmd, configVersion, accessSettings).
+- [ ] T011 [P] Создать `upload/UploadReport.java` и `upload/UploadStage.java` — статусы стадий, режим (фактический), коды возврата `ibcmd`, итоговый текст для UI/лога (data-model.md, `UploadReport`).
+- [ ] T012 Реализовать `upload/TargetResolver.java`: `IApplicationManager#getDefaultApplication`, `IInfobaseApplication#getInfobase`, `InfobaseType.FILE` + `FileConnectionString#getFile`, `IApplication#getRequiredVersion`, `IRuntimeInstallationManager#getAllRegistered` + `RuntimeInstallations.filterByVersion`, `IRuntimeComponentManager#resolveExecutor(...THICK_CLIENT)`, путь `ibcmd` рядом с `1cv8` (`bin/ibcmd.exe` на Windows); на любой провал — типизированная ошибка, ИБ не трогается (research R2, R6).
+- [ ] T013 [P] Тесты `tests/io.github.fastsync.edt.tests/src/io/github/fastsync/edt/tests/TargetResolverTest.java` (Mockito): нет приложения; не ИБ; не файловая; нет версии; нет/несколько установок; нет `ibcmd` — все кейсы data-model.md `UploadTarget`.
+- [ ] T014 [P] Создать `upload/IbcmdCommandBuilder.java`: сборка команд полной/частичной загрузки, `config apply`, повтор с `--force`, `config export info --out=<dir>`, общие `--data`/`--temp`/`--db-path`, индексы секретных аргументов (contracts/ibcmd-contract.md).
+- [ ] T015 [P] Тесты `tests/.../IbcmdCommandBuilderTest.java`: порядок аргументов, абсолютные пути, `--partial`/`--base-dir`/список файлов, отсутствие `--session-terminate`, `--force` только в apply-повторе.
+- [ ] T016 [P] Создать `ui/ConsoleOutput.java`: `MessageConsole` «FastSync ibcmd», поток вывода, очистка/показ консоли (contracts/command-contract.md).
+- [ ] T017 Реализовать `upload/IbcmdRunner.java`: `ProcessBuilder`, объединённый stdout+stderr, потоковая передача в `ConsoleOutput`/колбэк, накопление вывода, код возврата, отмена через `IProgressMonitor` (уничтожение процесса), маскирование секретов (contracts/ibcmd-contract.md).
+- [ ] T018 [P] Создать stub-скрипт `tests/io.github.fastsync.edt.tests/resources/ibcmd-stub.sh` (успех, ненулевой код, «предупреждение», длительный процесс) и `tests/.../IbcmdRunnerTest.java`.
+- [ ] T019 Реализовать `upload/UploadJob.java`: Eclipse `Job` с `setUser(true)`, `SubMonitor` по стадиям, Cancel → отмена операции, обновление консоли/итогового отчёта.
+- [ ] T020 Прогнать `./scripts/build.sh`; убедиться, что фундаментальные тесты зелёные.
+
+**Checkpoint**: foundation ready — можно начинать user stories.
+
+---
+
+## Phase 3: User Story 1 - Полная загрузка в привязанную файловую ИБ (Priority: P1) 🎯 MVP
+
+**Goal**: пользователь запускает команду, выбирает полную загрузку, получает актуальную конфигурацию в ИБ и консистентное состояние синхронизации EDT.
+
+**Independent Test**: проект с файловой ИБ, изменение одного объекта → команда → полная загрузка → `ibcmd config import` + `config apply` код 0, конфигурация ИБ обновилась, штатная загрузка EDT не предлагает те же изменения, исходники проекта не изменены.
+
+### Tests for User Story 1
+
+- [ ] T021 [P] [US1] `tests/.../SourceExporterTest.java` (Mockito) — полный экспорт: вызов `IExportPreparationService` + `IExportOperationFactory#createExportOperation(path, version, strategy, configuration)`, temp-каталог, `ConfigDumpInfo.xml`, удаление temp.
+- [ ] T022 [P] [US1] `tests/.../UploadOperationFullTest.java` — happy path полной загрузки на фейках (resolver/exporter/runner/sync): порядок стадий, `config import` + `config apply`, обновление sync state, отчёт `DONE`.
+
+### Implementation for User Story 1
+
+- [ ] T023 [US1] Реализовать `upload/SourceExporter.java` (полный экспорт): `IExportPreparationService#waitForExportPreparation`, `IExportOperationFactory`, `IExportStrategy`, `Version` из `IV8Project`; временный каталог `<tmp>/xml`; возвращает `ExportResult` (data-model.md).
+- [ ] T024 [US1] Реализовать `upload/SyncFlowSession.java`: обёртка публичного v2-flow — `IInfobaseSynchronizationStateManager#startUpdateInfobaseFlow(IDtProject, InfobaseReference)`, `start()`, `loadActualConfigDumpInfo(Path)`, `finish()`, `cancel()`; internal-типы не импортируются, ошибки — `RuntimeException` (research R4).
+- [ ] T025 [US1] Реализовать `upload/SyncStateUpdater.java`: `ibcmd config export info --out=<tmp>/dump`, путь `<tmp>/dump/ConfigDumpInfo.xml` → `SyncFlowSession#loadActualConfigDumpInfo`; при неуспехе состояние не обновляется (FR-018/FR-019).
+- [ ] T026 [US1] Реализовать `upload/UploadOperation.java` — state machine `PRECHECK → SAVE → EXPORT → SESSION → IMPORT → APPLY → SYNC_STATE → DONE` для полной загрузки; `finally` — очистка temp и снятие блокировки «одна операция на проект» (data-model.md).
+- [ ] T027 [US1] Реализовать `ui/UploadModeDialog.java` (radio FULL/PARTIAL, сведения о цели) и `ui/UploadSourcesHandler.java` (selection → resolver → dialog → `UploadJob`); регистрация уже в T005.
+- [ ] T028 [US1] Подключить в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/UploadOperation.java` потоковый вывод `ibcmd` в `ui/ConsoleOutput.java` и прогресс по стадиям (через `IbcmdRunner`/`UploadJob`).
+- [ ] T029 [US1] Проверить `./scripts/build.sh` и вручную E2E полной загрузки по [quickstart.md](quickstart.md); проверить, что файлы проекта не изменены, temp удалён.
+
+**Checkpoint**: US1 работает и проверена независимо — MVP готов.
+
+---
+
+## Phase 4: User Story 2 - Частичная загрузка несинхронизированных изменений (Priority: P2)
+
+**Goal**: перенос только изменённых объектов с автоматическим fallback на полную загрузку при удалении/переименовании.
+
+**Independent Test**: изменение одного объекта → частичная загрузка → импорт только изменённых файлов, итог совпадает с полной; удаление/переименование → автоматически полная загрузка с сообщением.
+
+### Tests for User Story 2
+
+- [ ] T030 [P] [US2] `tests/.../ChangeSetTest.java` — `removed` непустой → `requiresFullReload`; пустые added+changed → nothing; rename-сценарий (старый URI в removed).
+- [ ] T031 [P] [US2] `tests/.../UploadOperationPartialTest.java` — частичная загрузка (файлы/`--partial`), fallback на полную при удалении, отчёт с причиной fallback.
+
+### Implementation for User Story 2
+
+- [ ] T032 [US2] Создать `upload/ChangeSet.java` (added/changed/removed, `requiresFullReload`, `isEmpty`) по data-model.md.
+- [ ] T033 [US2] Расширить `upload/SyncFlowSession.java`: `collectChanges()` в `beginBackgroundOperation(..., ProjectPipelineJob.IMPORT)` → `flow.collectEdtObjectChanges()` → `ChangeSet` (left/middle/right) + `flow.isFullReloadRequired()` (research R4).
+- [ ] T034 [US2] Расширить `upload/SourceExporter.java`: частичный экспорт только изменённых объектов (added+changed), `IExportStrategy` с subordinates, список созданных XML-файлов для `config import files`.
+- [ ] T035 [US2] Расширить `upload/IbcmdCommandBuilder.java`: `config import files --partial --base-dir=<xmlDir> <relFiles...>` по contracts/ibcmd-contract.md (T014 частично готовит сборку — уточнить сигнатуру).
+- [ ] T036 [US2] Добавить в `upload/UploadOperation.java` ветку PARTIAL: сбор change set, `NOTHING_TO_UPLOAD`, fallback FULL при `requiresFullReload`, передача причины в `UploadReport`/UI.
+- [ ] T037 [US2] Дополнить `tests/.../IbcmdCommandBuilderTest.java` кейсами частичной загрузки (`--partial`, `--base-dir`, список файлов, пустой список не допускается).
+- [ ] T038 [US2] `./scripts/build.sh` + ручной E2E: частичная загрузка, удаление/переименование объекта → fallback (quickstart.md).
+
+**Checkpoint**: US1 и US2 работают независимо.
+
+---
+
+## Phase 5: User Story 3 - Безопасный отказ и сеанс агента Конфигуратора (Priority: P2)
+
+**Goal**: при невозможности продолжить ИБ не меняется; открытый сеанс агента закрывается перед операцией и восстанавливается после любого исхода.
+
+**Independent Test**: негативные preflight-кейсы не меняют ИБ (hash/mtime); при открытом сеансе агента он закрывается и восстанавливается после успеха, ошибки и отмены; при невозможности закрыть/восстановить — отказ до изменения ИБ.
+
+### Tests for User Story 3
+
+- [ ] T039 [P] [US3] `tests/.../DesignerSessionGuardTest.java` — `wasConnected=false` → не открывать; `true` → close+open; ошибка close → отказ до импорта; ошибка open после операции → ошибка восстановления, процесс не убивается.
+- [ ] T040 [P] [US3] `tests/.../UploadSourcesHandlerTest.java` — негативный preflight: показывается локализованное сообщение, `UploadJob` не запускается.
+
+### Implementation for User Story 3
+
+- [ ] T041 [US3] Реализовать `upload/DesignerSessionGuard.java`: `IDesignerSessionThickClientLauncher#getDesignerSessionDirectory/closeDesignerSession/openDesignerSession`, no-op `IDesignerAgentConnectionListener`, `wasConnected`/`restored` по data-model.md; процесс агента не завершается (research R5).
+- [ ] T042 [US3] Встроить `DesignerSessionGuard` в `upload/UploadOperation.java`: состояние `SESSION` после `EXPORT`, отказ до `IMPORT` при невозможности закрыть, восстановление в `finally` при `DONE`/`FAILED`/`CANCELLED`.
+- [ ] T043 [US3] Проверить, что все preflight-ошибки дают понятный текст из `messages.properties`/`messages_ru.properties`, и ни одна ветка не начинает импорт.
+- [ ] T044 [US3] `./scripts/build.sh` + ручной E2E негативных кейсов и восстановления сеанса агента (quickstart.md); проверить неизменность файлов ИБ.
+
+**Checkpoint**: US1–US3 работают независимо.
+
+---
+
+## Phase 6: User Story 4 - Подтверждение `--force`, отмена и наблюдаемость (Priority: P3)
+
+**Goal**: предупреждения apply подтверждаются пользователем, отмена работает на всех стадиях, каждая команда и её код видны, секреты не утекают.
+
+**Independent Test**: спровоцировать предупреждение apply → отказ от `--force` (импорт есть, apply нет, синхронизация не обновлена), согласие → один повтор с `--force`; отмена на разных стадиях; в консоли нет паролей.
+
+### Tests for User Story 4
+
+- [ ] T045 [P] [US4] `tests/.../WarningsParserTest.java` — распознавание «нужно подтверждение/предупреждение» из вывода/кода, отсутствие `--session-terminate=force`.
+- [ ] T046 [P] [US4] `tests/.../SecretsMaskingTest.java` — пароль не попадает в вывод консоли, `UploadReport`, `toString()` команд и лог.
+- [ ] T047 [P] [US4] `tests/.../UploadReportTest.java` — отчёт содержит режим, ИБ, все команды и коды, что применено/не применено.
+
+### Implementation for User Story 4
+
+- [ ] T048 [US4] Реализовать `upload/WarningsParser.java`: анализ вывода/кода `config apply`, признак необходимости `--force`; правило — один повтор после подтверждения.
+- [ ] T049 [US4] Реализовать `ui/ConfirmForceDialog.java` и встроить в `upload/UploadOperation.java`: при отказе — «импортировано, но не применено», sync state не обновляется; при согласии — `config apply --force` один раз.
+- [ ] T050 [US4] Довести отмену: `IbcmdRunner` уничтожает процесс, `UploadOperation` проверяет `monitor.isCanceled()` между стадиями, состояние `CANCELLED`, восстановление сеанса, честный отчёт; дополнить `tests/.../IbcmdRunnerTest.java` (stub «долгий» процесс).
+- [ ] T051 [US4] Маскирование секретов в `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/IbcmdCommandBuilder.java`, `upload/IbcmdRunner.java`, `ui/ConsoleOutput.java`, `upload/UploadReport.java` и записи в Error Log (FR-021).
+- [ ] T052 [US4] Итоговый отчёт/диалог: все стадии, команды, коды возврата, что импортировано/применено/осталось; вывод в консоль «FastSync ibcmd» (contracts/command-contract.md).
+- [ ] T053 [US4] `./scripts/build.sh` + ручной E2E: предупреждения/`--force`, отмена на разных стадиях, вывод и секреты (quickstart.md).
+
+**Checkpoint**: все четыре user stories работают независимо.
+
+---
+
+## Phase 7: Polish & Cross-Cutting Concerns
+
+**Purpose**: документация, локализация, финальная проверка и коммит.
+
+- [ ] T054 [P] Обновить `README.md`: убрать описание временной диагностики, описать команду, требования (EDT 2026.2.2 / Java 25 / Eclipse 2025-12 / Tycho 5.0.2 / Maven 3.9.16), ограничения (только файловая ИБ, без создания ИБ, без завершения сеансов), риск видимости пароля как аргумента процесса.
+- [ ] T055 [P] Ревью локализации: все новые строки только в `messages.properties`/`messages_ru.properties`; паритет ключей ru/en; нет текста в коде.
+- [ ] T056 [P] Проверить отсутствие внутренних пакетов (`com._1c.g5.v8.dt.internal.*`) в импортах bundle и `Require-Bundle`; убрать мёртвый код/остатки диагностики.
+- [ ] T057 Запустить `./scripts/build.sh` (clean verify): все тесты зелёные, без новых предупреждений; исправить регрессии.
+- [ ] T058 Пройти [quickstart.md](quickstart.md) целиком (full, partial, fallback, негативы, сеанс агента, `--force`, отмена) и записать результат проверки.
+- [ ] T059 Закоммитить реализацию в корне репозитория (`git add bundles/io.github.fastsync.edt tests/io.github.fastsync.edt.tests README.md` + `git commit`) с осмысленным сообщением.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Setup (Phase 1)**: без зависимостей.
+- **Foundational (Phase 2)**: после Setup — блокирует все user stories.
+- **US1 (Phase 3)**: после Foundational; даёт ядро (exporter, sync flow, operation, UI).
+- **US2 (Phase 4)**: после US1 (переиспользует `SourceExporter`/`SyncFlowSession`/`UploadOperation`).
+- **US3 (Phase 5)**: после US1 (встраивается в `UploadOperation`); может выполняться параллельно с US2, если не трогать те же методы — на практике последовательно.
+- **US4 (Phase 6)**: после US1 (runner/report); независим от US2/US3 по файлам, но интегрируется в `UploadOperation`.
+- **Polish (Phase 7)**: после всех выбранных историй.
+
+### User Story Dependencies
+
+- **US1 (P1)**: MVP; ни от чего не зависит, кроме Foundational.
+- **US2 (P2)**: зависит от ядра US1 (T023–T028).
+- **US3 (P2)**: зависит от US1 (T026) — внедрение guard в operation.
+- **US4 (P3)**: зависит от US1 (T017, T026) — warning/cancel/report.
+
+### Within Each User Story
+
+- Тесты пишутся до реализации и должны падать (по AGENTS.md).
+- Модели → сервисы → UI/интеграция.
+- После каждой истории — сборка + независимая проверка.
+
+### Parallel Opportunities
+
+- Setup: T002, T004, T005, T006, T007, T008 — разные файлы.
+- Foundational: T009, T010, T011, T014, T015, T016, T018 — разные файлы; T017 после T014/T016.
+- US1: T021 и T022 (тесты) параллельно; T023/T024/T025 — разные файлы, после них T026; T027/T028 после T026.
+- US2: T030/T031 параллельно; T032 → T033; T034/T035 параллельно после T032.
+- US3: T039/T040 параллельно; T041 → T042.
+- US4: T045/T046/T047 параллельно; T048 → T049; T050/T051/T052 параллельно после T048.
+
+---
+
+## Parallel Example: User Story 1
+
+```bash
+# Тесты US1 параллельно:
+Task: "SourceExporterTest в tests/io.github.fastsync.edt.tests/src/io/github/fastsync/edt/tests/SourceExporterTest.java"
+Task: "UploadOperationFullTest в tests/io.github.fastsync.edt.tests/src/io/github/fastsync/edt/tests/UploadOperationFullTest.java"
+
+# Реализация US1 параллельно (разные файлы):
+Task: "SourceExporter в bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/SourceExporter.java"
+Task: "SyncFlowSession в bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/SyncFlowSession.java"
+Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/upload/SyncStateUpdater.java"
+```
+
+---
+
+## Implementation Strategy
+
+### MVP First (User Story 1 Only)
+
+1. Phase 1: Setup (T001–T008).
+2. Phase 2: Foundational (T009–T020) — критично, блокирует всё.
+3. Phase 3: US1 (T021–T029).
+4. **STOP and VALIDATE**: E2E полной загрузки; исходники не изменены, состояние синхронизации консистентно.
+
+### Incremental Delivery
+
+1. Setup + Foundational → foundation ready.
+2. US1 → полная загрузка (MVP).
+3. US2 → частичная загрузка + fallback.
+4. US3 → безопасные отказы + сеанс агента.
+5. US4 → `--force`/отмена/наблюдаемость.
+6. Polish → README, локализация, полная сборка/E2E, коммит.
+
+---
+
+## Notes
+
+- [P] — разные файлы, нет зависимостей.
+- [Story] — трассировка к US1…US4 из spec.md.
+- Тесты обязательны (AGENTS.md): писать до реализации, проверять падение.
+- Коммит — после логических групп; финальный коммит — T059.
+- Не добавлять зависимости/абстракции вне плана; внутренние пакеты EDT запрещены.
+- Секреты, `--session-terminate=force`, `infobase create` — под запретом на всех этапах.
