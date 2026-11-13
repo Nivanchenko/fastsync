@@ -86,6 +86,34 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 В логе Run As → Eclipse Application на Java 25 нормальны и не связаны с FastSync:
 `Using incubator modules: jdk.incubator.vector`, `restricted method Runtime.load`, `SLF4J: Failed to load StaticLoggerBinder`, `Annotation classes from 'javax.inject'/'javax.annotation'`, `sun.misc.Unsafe::staticFieldBase` (Guice), `NLS unused message` (внутренние bundle-ы Eclipse/EDT), `CoreSVG has logged an error`, а также запись `1C:EDT закрывается` при закрытии приложения. Подавить часть из них можно VM-аргументами запуска: `--enable-native-access=ALL-UNNAMED`, `-Declipse.e4.inject.javax.warning=false`.
 
+
+### Обязательные VM-аргументы для PDE-запуска EDT (Java 25)
+
+Без них 1C BM/Ignite не инициализируется (`InaccessibleObjectException: module java.base does not "opens java.nio"`), создание/импорт проекта падает, дерево метаданных показывается как структура каталогов.
+
+**Run → Run Configurations… → Eclipse Application → Arguments → VM arguments** — добавить:
+
+```text
+-Dosgi.requiredJavaVersion=25
+--add-modules=ALL-SYSTEM
+--add-opens=java.base/java.lang.constant=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.lang.ref=ALL-UNNAMED
+--add-opens=java.base/java.nio=ALL-UNNAMED
+--add-opens=java.base/java.time=ALL-UNNAMED
+--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+--add-opens=java.base/java.net=ALL-UNNAMED
+-Dorg.osgi.framework.bundle.parent=ext
+-Dosgi.module.lock.timeout=240
+-De1c.wiring.managedInitialization=true
+-DmigrationEnabled=true
+-Dlog4j.configuration=platform:/plugin/com._1c.g5.v8.dt.logging/log4j.properties
+-Dlog4j.formatMsgNoLookups=true
+-Dlog4j2.formatMsgNoLookups=true
+```
+
+Критичен `--add-opens=java.base/java.nio=ALL-UNNAMED`; остальные нужны остальным компонентам EDT. После падения первого запуска удалите из runtime-workspace частично созданный проект (`/Конфигурация`) с содержимым на диске и повторите.
+
 ## Ожидаемые артефакты после реализации
 
 - `bundles/io.github.fastsync.edt/src/io/github/fastsync/edt/**` — команда, диалог, orchestrator, resolver, exporter, session guard, ibcmd runner, sync updater, report, messages.
