@@ -83,6 +83,19 @@ public final class SyncFlowSession implements AutoCloseable
         }
     }
 
+    /** Marks the flow as a full reload, so finish() transfers every project resource. */
+    public void setFullReloadRequired() throws UploadException
+    {
+        try
+        {
+            flow.setFullReloadRequired(dtProject);
+        }
+        catch (RuntimeException e)
+        {
+            throw new UploadException(e, "error.sync", e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
     public void setActualGenerationId(String generationId) throws UploadException
     {
         try

@@ -103,6 +103,11 @@ public final class UploadOperation
                 }
             }
             report.setActualMode(full ? UploadMode.FULL : UploadMode.PARTIAL);
+            if (full)
+            {
+                // The standard EDT full load does the same before importing.
+                session.setFullReloadRequired();
+            }
 
             report.setStage(UploadStage.EXPORT);
             checkCancelled(monitor);
