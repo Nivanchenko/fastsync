@@ -187,6 +187,22 @@ public final class UploadOperation
     private void applyConfiguration(IbcmdRunner runner, IbcmdCommandBuilder builder, IProgressMonitor monitor,
         IbcmdRunner.Listener listener) throws UploadException
     {
+        if (!asksForConfirmation())
+        {
+            // The infobase preference explicitly disables confirmation: no doomed first attempt.
+            listener.outputLine(Messages.get("console.autoForce")); //$NON-NLS-1$
+            IbcmdRunner.Result forced = runCommand(runner, builder.apply(true), monitor, listener);
+            if (forced.exitCode() != 0)
+            {
+                if (WarningsParser.mentionsSessionTermination(forced.output()))
+                {
+                    throw new UploadException("error.sessionsBlocked"); //$NON-NLS-1$
+                }
+                throw new UploadException("error.apply", forced.exitCode(), tail(forced.output())); //$NON-NLS-1$
+            }
+            return;
+        }
+
         IbcmdRunner.Result result = runCommand(runner, builder.apply(false), monitor, listener);
         if (result.exitCode() == 0)
         {
@@ -202,30 +218,19 @@ public final class UploadOperation
         {
             throw new UploadException("error.apply", result.exitCode(), tail(output)); //$NON-NLS-1$
         }
-        if (asksForConfirmation())
+        if (!forceConfirmation.test(output))
         {
-            if (!forceConfirmation.test(output))
-            {
-                throw new UploadException("report.importedNotApplied"); //$NON-NLS-1$
-            }
-        }
-        else
-        {
-            // The infobase preference explicitly disables confirmation, as the standard EDT load does.
-            listener.outputLine(Messages.get("console.autoForce")); //$NON-NLS-1$
+            throw new UploadException("report.importedNotApplied"); //$NON-NLS-1$
         }
         listener.outputLine(Messages.get("console.confirmed")); //$NON-NLS-1$
         IbcmdInvocation forcedApply = builder.apply(true);
-        listener.outputLine(Messages.get("console.command", forcedApply.display())); //$NON-NLS-1$
-        IbcmdRunner.Result forced = runner.run(forcedApply, monitor, listener, "y\n"); //$NON-NLS-1$
-        listener.outputLine(Messages.get("console.exit", forced.exitCode())); //$NON-NLS-1$
-        report.command(forcedApply.display(), forced.exitCode());
-        if (forced.cancelled())
-        {
-            throw new UploadCancelledException();
-        }
+        IbcmdRunner.Result forced = runCommand(runner, forcedApply, monitor, listener, "y\n"); //$NON-NLS-1$
         if (forced.exitCode() != 0)
         {
+            if (WarningsParser.mentionsSessionTermination(forced.output()))
+            {
+                throw new UploadException("error.sessionsBlocked"); //$NON-NLS-1$
+            }
             throw new UploadException("error.apply", forced.exitCode(), tail(forced.output())); //$NON-NLS-1$
         }
     }
@@ -233,8 +238,14 @@ public final class UploadOperation
     private IbcmdRunner.Result runCommand(IbcmdRunner runner, IbcmdInvocation invocation, IProgressMonitor monitor,
         IbcmdRunner.Listener listener) throws UploadException
     {
+        return runCommand(runner, invocation, monitor, listener, null);
+    }
+
+    private IbcmdRunner.Result runCommand(IbcmdRunner runner, IbcmdInvocation invocation, IProgressMonitor monitor,
+        IbcmdRunner.Listener listener, String stdin) throws UploadException
+    {
         listener.outputLine(Messages.get("console.command", invocation.display())); //$NON-NLS-1$
-        IbcmdRunner.Result result = runner.run(invocation, monitor, listener);
+        IbcmdRunner.Result result = runner.run(invocation, monitor, listener, stdin);
         listener.outputLine(Messages.get("console.exit", result.exitCode())); //$NON-NLS-1$
         report.command(invocation.display(), result.exitCode());
         if (result.cancelled())
