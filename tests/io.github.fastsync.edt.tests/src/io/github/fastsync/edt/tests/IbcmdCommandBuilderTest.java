@@ -75,6 +75,8 @@ public class IbcmdCommandBuilderTest
         IbcmdInvocation invocation = builder(access).apply(false);
 
         assertTrue(invocation.arguments().contains("--password=secret"));
+        // Credentials are config-subcommand options and must follow "config", not "infobase".
+        assertTrue(invocation.arguments().indexOf("config") < invocation.arguments().indexOf("--user=admin"));
         assertTrue(invocation.display().contains("--password=***"));
         assertFalse(invocation.display().contains("secret"));
     }

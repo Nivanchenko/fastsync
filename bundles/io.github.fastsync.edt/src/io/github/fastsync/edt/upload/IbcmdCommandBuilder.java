@@ -61,6 +61,14 @@ public final class IbcmdCommandBuilder
         return invocation(arguments);
     }
 
+    public IbcmdInvocation generationId()
+    {
+        List<String> arguments = baseArguments();
+        arguments.add("config"); //$NON-NLS-1$
+        arguments.add("generation-id"); //$NON-NLS-1$
+        return invocation(arguments);
+    }
+
     public IbcmdInvocation exportInfo(Path outputDirectory)
     {
         List<String> arguments = baseArguments();
@@ -93,6 +101,11 @@ public final class IbcmdCommandBuilder
         arguments.add("--data=" + dataDirectory); //$NON-NLS-1$
         arguments.add("--temp=" + tempDirectory); //$NON-NLS-1$
         arguments.add("--db-path=" + target.infobasePath()); //$NON-NLS-1$
+        return arguments;
+    }
+
+    private IbcmdInvocation invocation(List<String> arguments)
+    {
         IInfobaseAccessSettings access = target.accessSettings();
         if (access != null)
         {
@@ -107,11 +120,6 @@ public final class IbcmdCommandBuilder
                 arguments.add("--password=" + password); //$NON-NLS-1$
             }
         }
-        return arguments;
-    }
-
-    private IbcmdInvocation invocation(List<String> arguments)
-    {
         for (int i = 0; i < arguments.size(); i++)
         {
             if (arguments.get(i).startsWith("--password=")) //$NON-NLS-1$

@@ -135,6 +135,8 @@ public final class UploadOperation
             checkCancelled(monitor);
             Path dumpDirectory = operationDirectory.resolve("dump"); //$NON-NLS-1$
             Files.createDirectories(dumpDirectory);
+            String generationId = generationId(runner, builder, monitor, listener);
+            session.setActualGenerationId(generationId);
             runCommand(runner, builder.exportInfo(dumpDirectory), monitor, listener);
             session.loadActualConfigDumpInfo(dumpDirectory);
             session.finish();
@@ -235,6 +237,33 @@ public final class UploadOperation
             throw new UploadCancelledException();
         }
         return result;
+    }
+
+    private String generationId(IbcmdRunner runner, IbcmdCommandBuilder builder, IProgressMonitor monitor,
+        IbcmdRunner.Listener listener) throws UploadException
+    {
+        listener.outputLine(Messages.get("console.command", builder.generationId().display())); //$NON-NLS-1$
+        IbcmdRunner.Result result = runner.run(builder.generationId(), monitor, listener);
+        listener.outputLine(Messages.get("console.exit", result.exitCode())); //$NON-NLS-1$
+        report.command(builder.generationId().display(), result.exitCode());
+        if (result.cancelled())
+        {
+            throw new UploadCancelledException();
+        }
+        if (result.exitCode() != 0)
+        {
+            throw new UploadException("error.sync", tail(result.output())); //$NON-NLS-1$
+        }
+        String[] lines = result.output().strip().split("\\R"); //$NON-NLS-1$
+        for (int i = lines.length - 1; i >= 0; i--)
+        {
+            String line = lines[i].strip();
+            if (!line.isEmpty())
+            {
+                return line;
+            }
+        }
+        throw new UploadException("error.sync", "empty generation id"); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private static String tail(String output)

@@ -83,6 +83,18 @@ public final class SyncFlowSession implements AutoCloseable
         }
     }
 
+    public void setActualGenerationId(String generationId) throws UploadException
+    {
+        try
+        {
+            flow.setActualGenerationId(generationId);
+        }
+        catch (RuntimeException e)
+        {
+            throw new UploadException(e, "error.sync", e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
     public void loadActualConfigDumpInfo(Path configDumpInfo) throws UploadException
     {
         try
