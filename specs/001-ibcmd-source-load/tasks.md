@@ -278,3 +278,5 @@ Task: "SyncStateUpdater в bundles/io.github.fastsync.edt/src/io/github/fastsync
 - [x] T061 [US1] Локализация по языку интерфейса EDT (`Platform.getNL()`): `plugin_ru.properties`/`feature_ru.properties`, `Messages` без fallback на локаль JVM. Подтверждено вживую (русский UI — русские меню и сообщения), сборка + тест `MessagesTest`.
 
 - [x] T062 [US1] После загрузки конфигурации дозагружать расширения проекта штатным механизмом EDT (`IV8ProjectManager` + `IInfobaseSynchronizationManager#updateInfobase`), итоговый диалог — таймлайн строк «время - действие - статус - длительность».
+
+- [x] T063 [US2] Частичная загрузка для изменений только в модулях: экспорт объекта-владельца модуля и передача `.bsl` в `import files --partial`; подтверждено вживую, полная загрузка как запасной fallback.
