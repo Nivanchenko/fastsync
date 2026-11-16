@@ -1,50 +1,99 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# FastSync EDT Plugin Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Public API Only
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Плагин MUST использовать только публичные API 1C:EDT и Eclipse. Импорт и вызов внутренних
+пакетов (`com._1c.g5.v8.dt.internal.*`, `com.e1c.g5.dt.internal.*`, `com._1c.g5.internal.*` и
+аналогичных) запрещён. Если задача не решается публичным API, MUST быть задокументированы
+ограничение и альтернатива, а использование внутреннего API — явно согласовано с владельцем
+проекта. Публичные API сверяются с Plugin Developer Guide и JavaDoc целевой линейки EDT.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Rationale: внутренние API не гарантируют совместимость между релизами EDT и ломают плагин
+при обновлении среды.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Safety of the Infobase, Sources and Secrets (NON-NEGOTIABLE)
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+Операции с информационной базой MUST быть безопасными и обратимыми:
+- запрещено завершать сеансы пользователей и использовать `--session-terminate=force`;
+- `--force` в `ibcmd` применяется только после явного подтверждения пользователя либо если
+  подтверждение отключено в настройках самой ИБ;
+- исходники проекта, его модели и `.settings` не изменяются плагином;
+- временные каталоги и файлы удаляются после операции, в том числе при ошибке/отмене;
+- пароли и другие секреты MUST маскироваться в консоли, отчётах, логах и Error Log;
+  учётные данные не коммитятся и не записываются в документацию;
+- каждое действие пользователя, меняющее ИБ, должно иметь понятное сообщение об ошибке с
+  причиной, без потери уже выполненных шагов.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: ошибка в синхронизации может повредить рабочую базу пользователя или раскрыть
+учётные данные; цена ошибки выше удобства.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Target Platform Contract
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Проект MUST собираться и работать на заявленной целевой среде: 1C:EDT 2026.2.2 (Java 25,
+bytecode level 25), Eclipse SimRel 2025-12, Maven + Tycho 5.0.2. OSGi-зависимости объявляются
+в `MANIFEST.MF`, точки расширения Eclipse — в `plugin.xml`; подключение зависимостей только
+через Maven `pom.xml` не допускается. Изменение target-конфигурации, минимальных версий
+зависимостей или структуры модулей MUST сопровождаться синхронным обновлением POM и
+документации. Новые зависимости не добавляются без необходимости.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Rationale: плагин устанавливается в конкретную сборку EDT; рассинхронизация версий даёт
+необъяснимые ошибки установки и запуска.
+
+### IV. Verification Before Completion
+
+Для каждого добавленного или изменённого поведения MUST быть тест (unit/PDE-JUnit), а сборка
+MUST проходить командой `./scripts/build.sh` (Maven/Tycho `verify`) без ослабления существующих
+проверок. Пользовательские сценарии (полная/частичная загрузка, расширения, подтверждения,
+ошибки) проверяются вручную в установленной EDT на файловой ИБ; результат фиксируется в
+`specs/<feature>/tasks.md`. Нельзя заявлять о готовности без фактического прогона сборки и
+тестов; невыполненные проверки явно перечисляются в итоговом сообщении.
+
+Rationale: плагин работает с реальными ИБ и внешним `ibcmd`, поэтому зелёный unit-тест без
+интеграционной проверки недостаточен.
+
+### V. Localization and Actionable UX
+
+Все пользовательские строки MUST быть вынесены в локализуемые `.properties` (bundle/feature и
+`Messages`) и выбираться по языку интерфейса EDT (`Platform.getNL()`, русский/английский без
+fallback на локаль JVM). Подписи меню, диалогов, консоли и итоговых отчётов MUST быть
+осмысленными и содержать достаточно контекста (что обновляется, какая ИБ, код возврата,
+причина ошибки). Секреты в UI не показываются. Текст не зашивается в обработчики и UI-код.
+
+Rationale: интерфейс EDT локализован, а смешение языков и неинформативные ошибки мешают
+пользователю принимать решения об изменении боевой базы.
+
+## Additional Constraints
+
+Технологический стек: Java 25, Tycho 5.0.2, OSGi/Eclipse 2025-12, 1C:EDT 2026.2.2;
+внешний инструмент — `ibcmd` из установленной платформы 8.3.27. Идентификатор bundle и Java
+namespace — `io.github.fastsync.edt`; при выборе другого namespace он меняется согласованно во
+всех PDE/Tycho-файлах. Плагин не создаёт информационные базы и не управляет сеансами. Для
+установки в EDT Lite (`1cestart`) должно быть задокументировано обходное решение через
+p2-director, если p2 не обновляет `bundles.info`. Не коммитятся секреты, локальные Maven
+settings, workspace Eclipse, `.metadata/` и результаты сборки. Новая лицензия или
+копирайт-заявление добавляются только по решению владельца репозитория.
+
+## Development Workflow
+
+Работа ведётся по Spec Kit: спецификация → план → задачи → реализация; артефакты хранятся в
+`specs/<feature>/`. Изменения кода сопровождаются тестами и прогоном
+`./scripts/build.sh`; при изменении требований, команд сборки или структуры модулей
+обновляется `README.md`, а результаты проверок — `tasks.md`/`research.md`. Коммиты атомарные,
+с понятным сообщением; каждое утверждение о готовности подтверждается фактическим выводом
+сборки/тестов. Конституция имеет приоритет над другими практиками; сложность и отклонения
+должны быть обоснованы. Перед релизом проверяется установка собранного p2-репозитория в
+целевой EDT и ключевой пользовательский сценарий.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Конституция имеет приоритет над остальными практиками и инструкциями проекта. Поправки
+вносятся через Spec Kit (`/speckit-constitution`), требуют явного решения владельца
+репозитория и миграционного плана, если меняются уже выпущенные артефакты. Версионирование
+по SemVer: MAJOR — несовместимое удаление/переопределение принципа, MINOR — новый
+принцип/материальное расширение, PATCH — уточнения формулировок. Каждый PR/задача MUST
+проверяться на соответствие принципам; несоблюдение MUST быть явно обосновано или устранено
+до завершения задачи. Для повседневных указаний разработчикам используется `AGENTS.md`.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-11-16 | **Last Amended**: 2026-11-16
