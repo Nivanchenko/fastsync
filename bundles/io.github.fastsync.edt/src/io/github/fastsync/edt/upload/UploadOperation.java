@@ -32,6 +32,7 @@ import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictRe
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolution;
 import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
 
+import io.github.fastsync.edt.Activator;
 import io.github.fastsync.edt.Messages;
 import io.github.fastsync.edt.ui.ForceConfirmation;
 
@@ -136,8 +137,10 @@ public final class UploadOperation
                     // collect; prefer a safe full reload over reporting "nothing to upload".
                     if (!isProjectDirty())
                     {
-                        listener.outputLine(Messages.get("console.diagnostic", false, equalityState(), //$NON-NLS-1$
-                            hasSynchronizationInfo())); //$NON-NLS-1$
+                        String diagnostics = Messages.get("log.diagnostic", project.getName(), //$NON-NLS-1$
+                            target.infobasePath(), equalityState(), hasSynchronizationInfo(), isProjectDirty());
+                        Activator.log(IStatus.WARNING, diagnostics, null);
+                        listener.outputLine(diagnostics);
                         report.setStage(UploadStage.DONE);
                         report.setSummary(Messages.get("report.nothing"), true); //$NON-NLS-1$
                         return report;
@@ -216,10 +219,12 @@ public final class UploadOperation
         }
         catch (UploadException e)
         {
+            Activator.log(IStatus.ERROR, e.getLocalizedMessage(), e);
             report.setSummary(e.getLocalizedMessage(), false);
         }
         catch (IOException e)
         {
+            Activator.log(IStatus.ERROR, e.getMessage(), e);
             report.setSummary(Messages.get("error.export", e.getMessage()), false); //$NON-NLS-1$
         }
         finally

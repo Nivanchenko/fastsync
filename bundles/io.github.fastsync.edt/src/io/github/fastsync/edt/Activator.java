@@ -1,5 +1,7 @@
 package io.github.fastsync.edt;
 
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
@@ -27,5 +29,15 @@ public class Activator extends AbstractUIPlugin
     public static Activator getDefault()
     {
         return plugin;
+    }
+
+    /** Writes a diagnostic message to the Eclipse Error Log. */
+    public static void log(int severity, String message, Throwable error)
+    {
+        Activator activator = getDefault();
+        if (activator != null)
+        {
+            activator.getLog().log(new Status(severity, PLUGIN_ID, message, error));
+        }
     }
 }
