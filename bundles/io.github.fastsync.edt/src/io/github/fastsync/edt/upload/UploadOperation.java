@@ -26,6 +26,7 @@ import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.platform.services.core.infobases.IInfobasePreferencesManager;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.v2.IInfobaseSynchronizationStateManager;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseUpdateCallback;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolutionResult;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolution;
@@ -131,14 +132,24 @@ public final class UploadOperation
                 changes = session.collectChanges();
                 if (changes.isEmpty())
                 {
-                    report.setStage(UploadStage.DONE);
-                    report.setSummary(Messages.get("report.nothing"), true); //$NON-NLS-1$
-                    return report;
+                    // shortcut: EDT's timestamp-based dirty check may see changes the flow cannot
+                    // collect; prefer a safe full reload over reporting "nothing to upload".
+                    if (!isProjectDirty())
+                    {
+                        report.setStage(UploadStage.DONE);
+                        report.setSummary(Messages.get("report.nothing"), true); //$NON-NLS-1$
+                        return report;
+                    }
+                    listener.outputLine(Messages.get("report.dirtyFallback")); //$NON-NLS-1$
+                    full = true;
                 }
-                full = changes.requiresFullReload();
-                if (full)
+                else
                 {
-                    listener.outputLine(Messages.get("report.fallback")); //$NON-NLS-1$
+                    full = changes.requiresFullReload();
+                    if (full)
+                    {
+                        listener.outputLine(Messages.get("report.fallback")); //$NON-NLS-1$
+                    }
                 }
             }
             report.setActualMode(full ? UploadMode.FULL : UploadMode.PARTIAL);
@@ -432,6 +443,20 @@ public final class UploadOperation
         if (monitor.isCanceled())
         {
             throw new UploadCancelledException();
+        }
+    }
+
+    @SuppressWarnings("removal")
+    private boolean isProjectDirty()
+    {
+        IInfobaseSynchronizationStateManager manager = Services.get(IInfobaseSynchronizationStateManager.class);
+        try
+        {
+            return manager != null && manager.isProjectDirty(target.dtProject(), target.infobase());
+        }
+        catch (RuntimeException e)
+        {
+            return false;
         }
     }
 
