@@ -172,6 +172,23 @@ public final class UploadOperation
                 ? exporter.exportFull(project, target, xmlDirectory, monitor)
                 : exporter.exportPartial(project, target, changes, xmlDirectory, monitor);
 
+            if (!full && export.files().isEmpty())
+            {
+                // shortcut: the fallback export service writes no XML for module-only changes;
+                // the internal EDT export would. Prefer a safe full upload over a failed partial.
+                if (changes != null)
+                {
+                    Activator.log(IStatus.WARNING, Messages.get("log.partialEmpty", changes.added().size(), //$NON-NLS-1$
+                        changes.changed().size(), changes.removed().size()), null);
+                }
+                listener.outputLine(Messages.get("report.partialEmptyFallback")); //$NON-NLS-1$
+                full = true;
+                report.setActualMode(UploadMode.FULL);
+                session.setFullReloadRequired();
+                Path fullDirectory = operationDirectory.resolve("xml-full"); //$NON-NLS-1$
+                export = exporter.exportFull(project, target, fullDirectory, monitor);
+            }
+
             report.setStage(UploadStage.SESSION);
             checkCancelled(monitor);
             designerSession = new DesignerSessionGuard(target);

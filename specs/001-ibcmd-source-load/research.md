@@ -129,3 +129,7 @@
 ## R12. Точечное обновление приложения
 
 Представление приложений EDT — CommonNavigator с view id `com.e1c.g5.dt.applications.ui.view`; его popup-меню адресуется как `popup:com.e1c.g5.dt.applications.ui.view` (generic `popup:org.eclipse.ui.popup.any?objectClass=...` там не срабатывает). Команда добавлена в это меню и показывается для `IInfobaseApplication`; `UploadSourcesHandler` принимает выделенное приложение, `TargetResolver#resolve(IProject, IApplication, IMonitor)` обновляет ИБ именно этого приложения. Запуск из проекта остаётся и использует приложение по умолчанию, которое явно показывается в диалоге.
+
+## R13. Ограничение fallback-экспорта для частичной загрузки
+
+Публичный путь `com._1c.g5.v8.dt.export.exportService` (`IExportService#work`) при изменении только BSL-модуля не пишет XML-файлы объекта (в отличие от внутреннего `IExportOperation`, который использует штатная EDT). Поэтому если `exportPartial` вернул 0 файлов, плагин переходит на полную загрузку (сообщение «Частичный экспорт не дал файлов...»). Полная загрузка корректна, просто медленнее; отдельный shortcut задокументирован в `UploadOperation`.
