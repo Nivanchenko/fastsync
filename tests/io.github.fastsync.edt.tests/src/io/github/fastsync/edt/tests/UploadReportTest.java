@@ -29,6 +29,18 @@ public class UploadReportTest
     }
 
     @Test
+    public void timelineReplacesDialogBody()
+    {
+        UploadReport report = new UploadReport();
+        report.setActualMode(UploadMode.FULL);
+        report.setSummary("uploaded", true);
+        report.command("ibcmd config apply", 0);
+        report.setTimeline("2026-10-16 13:31:11 - Full configuration load - Status OK - 40 sec");
+
+        assertEquals("2026-10-16 13:31:11 - Full configuration load - Status OK - 40 sec", report.format());
+    }
+
+    @Test
     public void appendSummaryKeepsBothMessagesAndMarksFailure()
     {
         UploadReport report = new UploadReport();

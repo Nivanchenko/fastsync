@@ -3,7 +3,14 @@ package io.github.fastsync.edt.upload;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -11,10 +18,18 @@ import java.util.stream.Stream;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 
+import com._1c.g5.v8.dt.core.platform.IExtensionProject;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.platform.services.core.infobases.IInfobasePreferencesManager;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseUpdateCallback;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolutionResult;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolution;
+import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
 
 import io.github.fastsync.edt.Messages;
 import io.github.fastsync.edt.ui.ForceConfirmation;
@@ -23,6 +38,30 @@ import io.github.fastsync.edt.ui.ForceConfirmation;
 public final class UploadOperation
 {
     private static final Set<String> ACTIVE = ConcurrentHashMap.newKeySet();
+    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); //$NON-NLS-1$
+
+    /**
+     * Extensions are loaded by the standard EDT mechanism, which should apply their changes.
+     * A proxy keeps the internal {@code IDbStructureChange} parameter out of our compile classpath.
+     */
+    private static final IInfobaseUpdateCallback CONFIRM_EXTENSION_CHANGES = confirmExtensionChanges();
+
+    private static IInfobaseUpdateCallback confirmExtensionChanges()
+    {
+        return (IInfobaseUpdateCallback) Proxy.newProxyInstance(UploadOperation.class.getClassLoader(),
+            new Class<?>[] { IInfobaseUpdateCallback.class }, (proxy, method, args) ->
+            {
+                if ("onConfirm".equals(method.getName())) //$NON-NLS-1$
+                {
+                    return Boolean.TRUE;
+                }
+                if ("resolveInfobaseChanges".equals(method.getName())) //$NON-NLS-1$
+                {
+                    return new InfobaseConflictResolution(InfobaseConflictResolutionResult.IGNORED);
+                }
+                return null;
+            });
+    }
 
     private final IProject project;
     private final UploadTarget target;
@@ -109,6 +148,7 @@ public final class UploadOperation
                 session.setFullReloadRequired();
             }
 
+            long configStart = System.currentTimeMillis();
             report.setStage(UploadStage.EXPORT);
             checkCancelled(monitor);
             Path xmlDirectory = operationDirectory.resolve("xml"); //$NON-NLS-1$
@@ -146,8 +186,16 @@ public final class UploadOperation
             session.loadActualConfigDumpInfo(dumpDirectory);
             session.finish();
 
+            List<String> timeline = new ArrayList<>();
+            timeline.add(timelineLine(configStart, System.currentTimeMillis(),
+                full ? Messages.get("report.config.full") : Messages.get("report.config.partial"), true)); //$NON-NLS-1$ //$NON-NLS-2$
+            boolean extensionsOk = loadExtensions(monitor, listener, timeline);
+
             report.setStage(UploadStage.DONE);
-            report.setSummary(Messages.get("report.success", target.infobasePath()), true); //$NON-NLS-1$
+            report.setTimeline(String.join(System.lineSeparator(), timeline));
+            report.setSummary(extensionsOk
+                ? Messages.get("report.success", target.infobasePath()) //$NON-NLS-1$
+                : Messages.get("report.extensionsFailed"), extensionsOk); //$NON-NLS-1$
         }
         catch (UploadCancelledException e)
         {
@@ -253,6 +301,75 @@ public final class UploadOperation
             throw new UploadCancelledException();
         }
         return result;
+    }
+
+    /** Loads every extension of the project into the infobase with the standard EDT mechanism. */
+    private boolean loadExtensions(IProgressMonitor monitor, IbcmdRunner.Listener listener, List<String> timeline)
+        throws UploadCancelledException
+    {
+        IV8ProjectManager projects = Services.get(IV8ProjectManager.class);
+        IInfobaseSynchronizationManager synchronization = Services.get(IInfobaseSynchronizationManager.class);
+        if (projects == null || synchronization == null)
+        {
+            return true;
+        }
+        List<IExtensionProject> extensions = projects.getProjects(IExtensionProject.class).stream()
+            .filter(extension -> project.equals(extension.getParentProject()))
+            .sorted(Comparator.comparing(this::extensionName))
+            .toList();
+        boolean ok = true;
+        for (IExtensionProject extension : extensions)
+        {
+            checkCancelled(monitor);
+            String name = extensionName(extension);
+            long start = System.currentTimeMillis();
+            boolean extensionOk;
+            try
+            {
+                IStatus status = synchronization.updateInfobase(extension.getProject(), target.infobase(),
+                    CONFIRM_EXTENSION_CHANGES, true, monitor);
+                extensionOk = status == null || status.isOK();
+                if (!extensionOk)
+                {
+                    listener.outputLine(Messages.get("console.extensionFailed", name, //$NON-NLS-1$
+                        status.getMessage() == null ? "" : status.getMessage())); //$NON-NLS-1$ //$NON-NLS-2$
+                }
+            }
+            catch (RuntimeException e)
+            {
+                extensionOk = false;
+                listener.outputLine(Messages.get("console.extensionFailed", name, //$NON-NLS-1$
+                    e.getMessage() == null ? "" : e.getMessage())); //$NON-NLS-1$ //$NON-NLS-2$
+            }
+            timeline.add(timelineLine(start, System.currentTimeMillis(),
+                Messages.get("report.extension", name), extensionOk)); //$NON-NLS-1$
+            ok &= extensionOk;
+        }
+        return ok;
+    }
+
+    private String extensionName(IExtensionProject extension)
+    {
+        String name = extension.getConfiguration() == null ? null : extension.getConfiguration().getName();
+        return name == null || name.isBlank() ? extension.getProject().getName() : name;
+    }
+
+    private static String timelineLine(long start, long end, String action, boolean ok)
+    {
+        String timestamp = LocalDateTime.ofInstant(Instant.ofEpochMilli(end), ZoneId.systemDefault())
+            .format(TIMESTAMP);
+        return Messages.get("report.timeline.line", timestamp, action, //$NON-NLS-1$
+            Messages.get(ok ? "report.status.ok" : "report.status.error"), duration(end - start)); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static String duration(long millis)
+    {
+        long seconds = Math.max(0, millis / 1000);
+        long minutes = seconds / 60;
+        long rest = seconds % 60;
+        return minutes > 0
+            ? Messages.get("duration.minutes", minutes) + " " + Messages.get("duration.seconds", rest) //$NON-NLS-1$ //$NON-NLS-2$
+            : Messages.get("duration.seconds", rest); //$NON-NLS-1$
     }
 
     private String generationId(IbcmdRunner runner, IbcmdCommandBuilder builder, IProgressMonitor monitor,

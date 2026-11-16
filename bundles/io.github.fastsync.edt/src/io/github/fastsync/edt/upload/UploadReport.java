@@ -14,6 +14,7 @@ public final class UploadReport
     private UploadMode actualMode;
     private boolean success;
     private String summary = ""; //$NON-NLS-1$
+    private String timeline = ""; //$NON-NLS-1$
 
     public UploadStage getStage()
     {
@@ -58,6 +59,12 @@ public final class UploadReport
         return success;
     }
 
+    /** One line per performed action: timestamp, action, status, duration. */
+    public void setTimeline(String timeline)
+    {
+        this.timeline = timeline;
+    }
+
     public String getSummary()
     {
         return summary;
@@ -65,6 +72,10 @@ public final class UploadReport
 
     public String format()
     {
+        if (!timeline.isEmpty())
+        {
+            return timeline;
+        }
         StringBuilder builder = new StringBuilder(summary);
         if (actualMode != null)
         {
