@@ -27,7 +27,11 @@ import com._1c.g5.v8.dt.export.IExportService;
 import com._1c.g5.v8.dt.export.IExportServiceRegistry;
 import com._1c.g5.v8.dt.export.IExportStrategy;
 import com._1c.g5.v8.dt.export.OrdinaryDirectoryBuilder;
+
+import io.github.fastsync.edt.Activator;
+import io.github.fastsync.edt.Messages;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
 
 /** Converts project sources to the XML format accepted by ibcmd. */
 public final class SourceExporter
@@ -95,7 +99,47 @@ public final class SourceExporter
         {
             throw new UploadException("report.nothing"); //$NON-NLS-1$
         }
-        return export(target, outputDirectory, monitor, objects.toArray(new EObject[0]));
+        ExportResult result = export(target, outputDirectory, monitor, objects.toArray(new EObject[0]));
+        if (!result.files().isEmpty())
+        {
+            return result;
+        }
+        // The public export service writes nothing for module-only changes; exporting the
+        // owning metadata object keeps the upload partial (the internal EDT export does this itself).
+        List<EObject> owners = new ArrayList<>();
+        for (EObject object : objects)
+        {
+            EObject owner = owningMetadataObject(object);
+            if (owner != null && !(owner instanceof Configuration) && !owners.contains(owner))
+            {
+                owners.add(owner);
+            }
+        }
+        Activator.log(IStatus.INFO, Messages.get("log.partialEmptyObjects", objectNames(objects)), null); //$NON-NLS-1$
+        if (owners.isEmpty())
+        {
+            return result;
+        }
+        Activator.log(IStatus.INFO, Messages.get("log.partialOwners", owners.size()), null); //$NON-NLS-1$
+        return export(target, outputDirectory, monitor, owners.toArray(new EObject[0]));
+    }
+
+    private EObject owningMetadataObject(EObject object)
+    {
+        for (EObject current = object.eContainer(); current != null; current = current.eContainer())
+        {
+            if (current instanceof MdObject)
+            {
+                return current;
+            }
+        }
+        return null;
+    }
+
+    private static String objectNames(List<EObject> objects)
+    {
+        return objects.stream().map(object -> object.eClass().getName()).distinct()
+            .reduce((left, right) -> left + ", " + right).orElse(""); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private ExportResult export(UploadTarget target, Path outputDirectory, IProgressMonitor monitor,
@@ -227,8 +271,9 @@ public final class SourceExporter
     {
         try (Stream<Path> stream = Files.walk(directory))
         {
+            // Module changes are standalone .bsl files, so the partial import list must not be
+            // limited to XML.
             return stream.filter(Files::isRegularFile)
-                .filter(path -> path.getFileName().toString().endsWith(".xml")) //$NON-NLS-1$
                 .filter(path -> !path.getFileName().toString().equals("ConfigDumpInfo.xml")) //$NON-NLS-1$
                 .sorted(Comparator.comparing(Path::toString))
                 .toList();
