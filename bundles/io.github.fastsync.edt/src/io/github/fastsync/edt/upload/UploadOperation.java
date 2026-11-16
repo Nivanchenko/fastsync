@@ -136,6 +136,8 @@ public final class UploadOperation
                     // collect; prefer a safe full reload over reporting "nothing to upload".
                     if (!isProjectDirty())
                     {
+                        listener.outputLine(Messages.get("console.diagnostic", false, equalityState(), //$NON-NLS-1$
+                            hasSynchronizationInfo())); //$NON-NLS-1$
                         report.setStage(UploadStage.DONE);
                         report.setSummary(Messages.get("report.nothing"), true); //$NON-NLS-1$
                         return report;
@@ -443,6 +445,32 @@ public final class UploadOperation
         if (monitor.isCanceled())
         {
             throw new UploadCancelledException();
+        }
+    }
+
+    private String equalityState()
+    {
+        IInfobaseSynchronizationManager manager = Services.get(IInfobaseSynchronizationManager.class);
+        try
+        {
+            return manager == null ? "n/a" : String.valueOf(manager.getEqualityState(project, target.infobase())); //$NON-NLS-1$
+        }
+        catch (RuntimeException e)
+        {
+            return "n/a"; //$NON-NLS-1$
+        }
+    }
+
+    private boolean hasSynchronizationInfo()
+    {
+        IInfobaseSynchronizationStateManager manager = Services.get(IInfobaseSynchronizationStateManager.class);
+        try
+        {
+            return manager != null && manager.hasSynchronizationInfo(project, target.infobase());
+        }
+        catch (RuntimeException e)
+        {
+            return false;
         }
     }
 
