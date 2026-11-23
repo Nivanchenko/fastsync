@@ -1,14 +1,29 @@
 # FastSync для 1C:EDT
 
-Java-плагин для 1C:EDT: отдельная команда загрузки исходников проекта в привязанную **файловую** информационную базу через `ibcmd`. Команда дополняет штатную загрузку EDT, не перехватывает и не заменяет её.
+Java-плагин для 1C:EDT: отдельная команда загрузки исходников проекта в привязанную **файловую** информационную базу через `ibcmd`.
 
-Целевая среда — **1C:EDT 2026.2.2** (работает на Java 25, Eclipse 2025-12, Tycho 5.0.2).
+## Установка
 
-## Возможности
+Update site: **https://nivanchenko.github.io/fastsync/repository/** (страница плагина — https://nivanchenko.github.io/fastsync/)
 
-- полная загрузка: экспорт всей конфигурации средствами EDT в XML и `ibcmd infobase config import` + `config apply`;
-- частичная загрузка: экспорт только несинхронизированных изменений и `ibcmd config import files --partial` + `config apply`;
-- автоматический переход на полную загрузку, если среди частичных изменений есть удалённые/переименованные объекты;
+1. В 1C:EDT: **Справка → Установить новое ПО…** (в английском интерфейсе — **Help → Install New Software…**).
+2. **Добавить… → Репозиторий** и в поле Location укажите `https://nivanchenko.github.io/fastsync/repository/`.
+3. Выберите **FastSync for 1C:EDT** → **Далее** → примите условия → перезапустите EDT.
+
+Нужна **1C:EDT 2026.2.2** (Java 25); в более старые EDT (2025.x) плагин не установится по BREE.
+
+Офлайн-вариант: скачайте `fastsync-update-site.zip` из GitHub Release, распакуйте и укажите каталог через **Добавить… → Локальный…**.
+
+> Если после установки команда не появилась: в некоторых сборках EDT Lite (`1cestart`) p2 не обновляет `configuration/.../bundles.info`, и бандл не загружается. Установите/обновите плагин headless p2-director'ом (команда — в [quickstart.md](specs/001-ibcmd-source-load/quickstart.md), раздел «Установка через p2-director»).
+
+## Что делает плагин
+
+Добавляет в EDT команду, которая загружает исходники проекта в привязанную к проекту **файловую** информационную базу напрямую через `ibcmd`: экспорт конфигурации средствами EDT в XML, затем `ibcmd infobase config import` + `config apply`. Штатную загрузку EDT команда не перехватывает и не заменяет — это альтернативный путь, который не требует запущенного клиента EDT-загрузки и работает на уровне файлов.
+
+Загрузка бывает полной (**Full** — вся конфигурация) и частичной (**Partial** — только несинхронизированные изменения; переносятся метаданные, не данные). Если среди частичных изменений есть удалённые или переименованные объекты, плагин сам переходит на полную загрузку.
+
+### Возможности
+
 - проверки до изменения базы: приложение проекта, файловая ИБ, установка платформы, наличие `ibcmd`;
 - закрытие и восстановление подключения агента Конфигуратора публичным API EDT (процесс агента не завершается);
 - подтверждение `--force` при предупреждениях `config apply` (без `--session-terminate=force` и без завершения сеансов пользователей);
@@ -48,6 +63,17 @@ p2-репозиторий 1С (`https://edt.1c.ru/downloads/releases/ruby/2026.2
 
 PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As → JUnit Plug-in Test** (или в составе `verify`).
 
+## Установка локально собранного плагина
+
+Для проверки изменений ставьте плагин в установленную **1C:EDT 2026.2.2**: self-hosted PDE-запуск EDT на Java 25 нестабилен (`PlatformPlugin.getRuntimeRegistry() is null`, таймауты сервисов).
+
+1. Соберите p2-репозиторий: `./scripts/build.sh` → `repositories/io.github.fastsync.edt.repository/target/repository/`.
+2. В EDT: **Help → Install New Software… → Add… → Local…** → укажите каталог `repositories/io.github.fastsync.edt.repository/target/repository`.
+3. Выберите **FastSync for 1C:EDT** → Next → примите условия → Restart.
+4. Откройте проект с файловой ИБ и выполните ПКМ → **Upload Sources to Infobase via ibcmd**.
+
+После изменения кода: пересоберите p2 и повторите установку/обновление (**Help → Installation Details → Update**).
+
 ## Запуск в Eclipse PDE
 
 1. Импортируйте проекты из репозитория: **File → Import → Existing Projects into Workspace**.
@@ -79,8 +105,7 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 - `ibcmd` принимает пароль как аргумент процесса — при наличии учётных данных пароль может быть кратковременно виден другим процессам того же пользователя; плагин маскирует его в выводе и не сохраняет;
 - расширения конфигурации не поддерживаются в v1.
 
-
-## Публикация и установка из GitHub Pages
+## Публикация update site
 
 `.github/workflows/build.yml` собирает p2-репозиторий на GitHub Actions при push в `master`, при push тега `v*` и вручную (`workflow_dispatch`):
 
@@ -92,19 +117,6 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 Однократная настройка репозитория: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 Первая сборка в CI заметно дольше локальной: Tycho скачивает целевую платформу EDT; дальше её сохраняет кэш Maven (`setup-java` cache).
-
-## Проверка в установленной EDT (рекомендуется вместо PDE)
-
-Self-hosted PDE-запуск EDT на Java 25 нестабилен (`PlatformPlugin.getRuntimeRegistry() is null`, таймауты сервисов). Для проверки пользовательского сценария ставьте собранный плагин в **1C:EDT 2026.2.2**:
-
-1. Соберите p2-репозиторий: `./scripts/build.sh` → `repositories/io.github.fastsync.edt.repository/target/repository/`.
-2. В EDT: **Help → Install New Software… → Add… → Local…** → укажите каталог `repositories/io.github.fastsync.edt.repository/target/repository` (или URL update site из GitHub Pages — см. раздел «Публикация»).
-3. Выберите **FastSync for 1C:EDT** → Next → примите условия → Restart.
-4. Откройте проект с файловой ИБ и выполните ПКМ → **Upload Sources to Infobase via ibcmd**.
-
-Плагин собран под EDT 2026.2.2 / Java 25; в более старые EDT (2025.x) он не установится по BREE. Для итераций после изменения кода: пересобрать p2 и повторить установку/обновление (**Help → Installation Details → Update**).
-
-> Если после установки команда не появилась: в некоторых сборках EDT Lite (`1cestart`) p2 не обновляет `configuration/.../bundles.info`, и бандл не загружается. Установите/обновите плагин headless p2-director'ом (команда — в [quickstart.md](specs/001-ibcmd-source-load/quickstart.md), раздел «Установка через p2-director»).
 
 ## Структура
 
