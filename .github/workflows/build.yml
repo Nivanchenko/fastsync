@@ -1,0 +1,100 @@
+name: Build and publish update site
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25 and Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '25'
+          java-package: jdk+fx
+          cache: maven
+
+      - name: Show Maven version
+        run: mvn -v
+
+      # p2-репозиторий 1С (edt.1c.ru) публичный: учётные данные не нужны.
+      # xvfb-run: бандлы EDT могут поднимать SWT/GTK даже в headless-тестах.
+      # Maven берётся из образа ubuntu-latest (>= 3.9.9 нужен Tycho 5.0.2).
+      - name: Build and test
+        run: xvfb-run -a mvn -B -ntp clean verify -Dtycho.localArtifacts=ignore
+
+      - name: Upload p2 repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-repository
+          path: |
+            repositories/io.github.fastsync.edt.repository/target/repository/
+            repositories/io.github.fastsync.edt.repository/target/*.zip
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: tests/io.github.fastsync.edt.tests/target/surefire-reports/
+          if-no-files-found: ignore
+
+      - name: Assemble GitHub Pages site
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p public/repository
+          cp -R repositories/io.github.fastsync.edt.repository/target/repository/. public/repository/
+          cp .github/pages/index.html public/index.html
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: p2-repository
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp io.github.fastsync.edt.repository-*.zip fastsync-update-site.zip
+          gh release create "$GITHUB_REF_NAME" fastsync-update-site.zip --generate-notes --verify-tag

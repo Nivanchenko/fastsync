@@ -44,14 +44,14 @@ Java-плагин для 1C:EDT: отдельная команда загруз�
 
 Скрипт использует `JAVA_HOME` (по умолчанию — Axiom JDK 25 из состава 1C), задаёт `MAVEN_HOME` и `PATH`, затем запускает `clean verify`. Если Maven ещё не установлен, сначала выполните `./scripts/install-maven.sh`.
 
-Для сборки нужен доступ к p2-репозиторию 1С (`P2_USER`/`P2_TOKEN`, см. GitHub Actions/secrets). Результат p2-сборки — `repositories/io.github.fastsync.edt.repository/target/repository/`.
+p2-репозиторий 1С (`https://edt.1c.ru/downloads/releases/ruby/2026.2/`) публичный — учётные данные для сборки не нужны. Результат p2-сборки — `repositories/io.github.fastsync.edt.repository/target/repository/`.
 
 PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As → JUnit Plug-in Test** (или в составе `verify`).
 
 ## Запуск в Eclipse PDE
 
 1. Импортируйте проекты из репозитория: **File → Import → Existing Projects into Workspace**.
-2. Откройте `targets/default/default.target` в Target Editor, авторизуйтесь учётной записью с доступом к p2-репозиторию 1С и выберите **Set as Active Target Platform**. Не сохраняйте учётные данные в репозитории.
+2. Откройте `targets/default/default.target` в Target Editor и выберите **Set as Active Target Platform**. p2-репозиторий 1С публичный; если Target Editor всё же запросит авторизацию, войдите своей учётной записью 1С, но не сохраняйте учётные данные в репозитории.
 3. Запустите **Run As → Eclipse Application** для проекта `io.github.fastsync.edt`.
 
 > Запускайте готовым `bundles/io.github.fastsync.edt/plugin.launch` (ПКМ → Run As → Eclipse Application): он задаёт EDT-продукт `com._1c.g5.v8.dt.product.application.rcp`, x86_64 JDK 25 и обязательные `--add-opens` для Java 25. С `org.eclipse.platform.ide` 1C-сервисы не поднимаются (зависание, `Service wait timed out`), а без `--add-opens=java.base/java.nio=ALL-UNNAMED` падает 1C BM/Ignite.
@@ -80,12 +80,25 @@ PDE/JUnit тесты: проект `io.github.fastsync.edt.tests` → **Run As �
 - расширения конфигурации не поддерживаются в v1.
 
 
+## Публикация и установка из GitHub Pages
+
+`.github/workflows/build.yml` собирает p2-репозиторий на GitHub Actions при push в `master`, при push тега `v*` и вручную (`workflow_dispatch`):
+
+- сборка и тесты — `mvn clean verify` (Tycho) на JDK 25 (Azul Zulu FX) в Xvfb; p2-репозиторий 1С публичный, secrets не нужны;
+- p2-репозиторий публикуется на GitHub Pages: `https://nivanchenko.github.io/fastsync/repository/`;
+- артефакт `p2-repository` доступен на странице запуска workflow;
+- на теге `v*` создаётся GitHub Release с `fastsync-update-site.zip` — архивом p2-репозитория для офлайн-установки.
+
+Однократная настройка репозитория: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+Первая сборка в CI заметно дольше локальной: Tycho скачивает целевую платформу EDT; дальше её сохраняет кэш Maven (`setup-java` cache).
+
 ## Проверка в установленной EDT (рекомендуется вместо PDE)
 
 Self-hosted PDE-запуск EDT на Java 25 нестабилен (`PlatformPlugin.getRuntimeRegistry() is null`, таймауты сервисов). Для проверки пользовательского сценария ставьте собранный плагин в **1C:EDT 2026.2.2**:
 
 1. Соберите p2-репозиторий: `./scripts/build.sh` → `repositories/io.github.fastsync.edt.repository/target/repository/`.
-2. В EDT: **Help → Install New Software… → Add… → Local…** → укажите каталог `repositories/io.github.fastsync.edt.repository/target/repository`.
+2. В EDT: **Help → Install New Software… → Add… → Local…** → укажите каталог `repositories/io.github.fastsync.edt.repository/target/repository` (или URL update site из GitHub Pages — см. раздел «Публикация»).
 3. Выберите **FastSync for 1C:EDT** → Next → примите условия → Restart.
 4. Откройте проект с файловой ИБ и выполните ПКМ → **Upload Sources to Infobase via ibcmd**.
 
@@ -103,6 +116,8 @@ features/io.github.fastsync.edt.feature/   Eclipse feature
 repositories/io.github.fastsync.edt.repository/ p2 update site
 tests/io.github.fastsync.edt.tests/        PDE/JUnit plug-in tests
 specs/001-ibcmd-source-load/               спека, план, задачи, исследования
+.github/workflows/build.yml                CI: сборка, тесты, публикация update site
+.github/pages/index.html                   стартовая страница GitHub Pages
 ```
 
 ## Документация
