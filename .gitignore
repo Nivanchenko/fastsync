@@ -23,3 +23,6 @@ JDK/
 
 # Other artifacts
 build/
+
+# Local 1C documentation dump (© 1C-Soft LLC, not redistributable)
+ibcmd-doc.txt

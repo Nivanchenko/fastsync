@@ -5,7 +5,7 @@
 - https://edt.1c.ru/dev/edt/2024.2/apidocs/
 - https://github.com/1C-Company/dt-example-plugins/tree/master/ (Пример плагина)
 
-Документация по ibcmd: ibcmd-doc.txt
+Документация по ibcmd: локальная выгрузка `ibcmd --help` (в репозиторий не коммитится, © 1C-Soft LLC)
 Я планирую использовать в едт версии 2026.2.2
 Она установлена в /Users/nikita.ivanchenko/Library/Application Support/1C/1cedtstart/installations/1C_EDT (Lite) 2026.2/1cedt.app
 JVM: /Applications/1C/1CE/components/axiom-jdk-full-25.0.2+12-x86_64

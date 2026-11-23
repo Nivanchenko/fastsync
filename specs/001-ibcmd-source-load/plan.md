@@ -116,7 +116,6 @@ tests/io.github.fastsync.edt.tests/
 scripts/build.sh, scripts/install-maven.sh
 .github/workflows/build.yml
 README.md
-ibcmd-doc.txt
 ```
 
 **Structure Decision**: сохраняется структура репозитория из `main` (Tycho multi-module: bundle + feature + p2 repository + PDE tests) — она уже соответствует конвенциям `AGENTS.md`. Вся новая логика — в одном bundle `io.github.fastsync.edt`, разбитая по ответственности (preflight → change set → export → session guard → ibcmd → sync state → report), без дополнительных модулей и зависимостей.
