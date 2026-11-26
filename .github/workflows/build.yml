@@ -27,6 +27,10 @@ jobs:
       - name: Show Maven version
         run: mvn -v
 
+      # CI calls mvn directly, so the check from ./scripts/build.sh runs here as a separate step.
+      - name: Check localized resources are ASCII
+        run: ./scripts/check-encoding.sh
+
       # p2-репозиторий 1С (edt.1c.ru) публичный: учётные данные не нужны.
       # xvfb-run: бандлы EDT могут поднимать SWT/GTK даже в headless-тестах.
       # Maven берётся из образа ubuntu-latest (>= 3.9.9 нужен Tycho 5.0.2).

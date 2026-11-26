@@ -21,10 +21,17 @@ public final class ConsoleOutput implements AutoCloseable
 
     public ConsoleOutput()
     {
-        console = new MessageConsole(Messages.get("console.name"), null); //$NON-NLS-1$
+        console = newConsole();
         IConsoleManager manager = ConsolePlugin.getDefault().getConsoleManager();
         manager.addConsoles(new IConsole[] { console });
         stream = console.newOutputStream();
+    }
+
+    static MessageConsole newConsole()
+    {
+        // Explicit encoding: we write UTF-8 bytes, while Eclipse would default to the workbench
+        // encoding (windows-1251 on Russian Windows) and show mojibake.
+        return new MessageConsole(Messages.get("console.name"), StandardCharsets.UTF_8.name(), null, true); //$NON-NLS-1$
     }
 
     public void activate()

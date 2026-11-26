@@ -20,4 +20,5 @@ export JAVA_HOME MAVEN_HOME
 export PATH="$MAVEN_HOME/bin:$JAVA_HOME/bin:$PATH"
 
 cd "$REPO_ROOT"
+"$SCRIPT_DIR/check-encoding.sh"
 exec "$MAVEN_HOME/bin/mvn" -B -ntp clean verify -Dtycho.localArtifacts=ignore
